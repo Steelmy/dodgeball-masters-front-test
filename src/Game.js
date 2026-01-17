@@ -137,6 +137,13 @@ export class Game {
     // Listen for state changes
     globalEvents.on(`state:${GAME_STATES.PLAYING}`, () => {
       this.roundManager.startRoundGameplay();
+      // Unlock movement when game starts
+      this.player.setMovementLocked(false);
+    });
+
+    globalEvents.on(`state:${GAME_STATES.COUNTDOWN}`, () => {
+      // Lock movement during countdown
+      this.player.setMovementLocked(true);
     });
 
     globalEvents.on(EVENTS.ROUND_START, () => {
@@ -210,6 +217,8 @@ export class Game {
 
       case GAME_STATES.COUNTDOWN:
         this.gameStateManager.updateCountdown(deltaTime, this.audioManager);
+        // Allow player rotation/camera control during countdown (movement locked)
+        this.player.update(deltaTime, this.arena);
         break;
 
       case GAME_STATES.PLAYING:

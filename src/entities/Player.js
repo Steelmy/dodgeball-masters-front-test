@@ -39,6 +39,7 @@ export class Player extends Entity {
     this.isTargeted = false;
     this.facingDirection = new THREE.Vector3(0, 0, -1);
     this.rotationY = 0; // Player rotation controlled by mouse
+    this.isMovementLocked = false;
 
     // Visual elements
     this.deflectZoneMesh = null;
@@ -183,9 +184,11 @@ export class Player extends Entity {
       if (moveDirection.length() > 0) {
         moveDirection.normalize();
 
-        // Apply movement
-        this.position.x += moveDirection.x * this.moveSpeed * deltaTime;
-        this.position.z += moveDirection.z * this.moveSpeed * deltaTime;
+        // Apply movement if not locked
+        if (!this.isMovementLocked) {
+          this.position.x += moveDirection.x * this.moveSpeed * deltaTime;
+          this.position.z += moveDirection.z * this.moveSpeed * deltaTime;
+        }
       }
 
       // Constrain to circular arena bounds
@@ -346,6 +349,13 @@ export class Player extends Entity {
    */
   setTargeted(targeted) {
     this.isTargeted = targeted;
+  }
+
+  /**
+   * Lock/unlock movement
+   */
+  setMovementLocked(locked) {
+    this.isMovementLocked = locked;
   }
 
   /**
