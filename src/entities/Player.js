@@ -42,7 +42,6 @@ export class Player extends Entity {
 
     // Visual elements
     this.deflectZoneMesh = null;
-    this.targetIndicator = null;
 
     this.init();
   }
@@ -50,7 +49,6 @@ export class Player extends Entity {
   init() {
     this.createMesh();
     this.createDeflectZone();
-    this.createTargetIndicator();
   }
 
   createMesh() {
@@ -127,23 +125,7 @@ export class Player extends Entity {
     this.mesh.add(this.deflectZoneMesh);
   }
 
-  createTargetIndicator() {
-    // Ring above player when targeted
-    const geometry = new THREE.RingGeometry(0.8, 1, 32);
-    const material = new THREE.MeshBasicMaterial({
-      color: COLORS.TARGET_INDICATOR,
-      transparent: true,
-      opacity: 0.8,
-      side: THREE.DoubleSide,
-    });
 
-    this.targetIndicator = new THREE.Mesh(geometry, material);
-    this.targetIndicator.rotation.x = -Math.PI / 2;
-    this.targetIndicator.position.y = PLAYER.HEIGHT + 0.5;
-    this.targetIndicator.visible = false;
-
-    this.mesh.add(this.targetIndicator);
-  }
 
   update(deltaTime, arena) {
     if (!this.isActive || !this.isAlive) return;
@@ -169,10 +151,7 @@ export class Player extends Entity {
     // Show deflect zone when action key is held (right click)
     this.deflectZoneMesh.visible = this.inputManager.isDeflectPressed();
 
-    // Animate target indicator
-    if (this.targetIndicator.visible) {
-      this.targetIndicator.rotation.z += deltaTime * 2;
-    }
+
 
     // Update mesh position
     if (this.mesh) {
@@ -331,7 +310,6 @@ export class Player extends Entity {
     this.canDeflect = true;
     this.deflectCooldown = 0;
     this.isTargeted = false;
-    this.targetIndicator.visible = false;
     this.velocityY = 0;
     this.isGrounded = true;
     this.position.y = 0;
@@ -368,7 +346,6 @@ export class Player extends Entity {
    */
   setTargeted(targeted) {
     this.isTargeted = targeted;
-    this.targetIndicator.visible = targeted;
   }
 
   /**

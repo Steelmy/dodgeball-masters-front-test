@@ -31,14 +31,14 @@ export class Bot extends Entity {
     this.facingDirection = new THREE.Vector3(0, 0, 1); // Facing toward player
 
     // Visual elements
-    this.targetIndicator = null;
+
 
     this.init();
   }
 
   init() {
     this.createMesh();
-    this.createTargetIndicator();
+
   }
 
   createMesh() {
@@ -101,22 +101,7 @@ export class Bot extends Entity {
     this.mesh.position.copy(this.position);
   }
 
-  createTargetIndicator() {
-    const geometry = new THREE.RingGeometry(0.8, 1, 32);
-    const material = new THREE.MeshBasicMaterial({
-      color: COLORS.TARGET_INDICATOR,
-      transparent: true,
-      opacity: 0.8,
-      side: THREE.DoubleSide,
-    });
 
-    this.targetIndicator = new THREE.Mesh(geometry, material);
-    this.targetIndicator.rotation.x = -Math.PI / 2;
-    this.targetIndicator.position.y = PLAYER.HEIGHT + 0.5;
-    this.targetIndicator.visible = false;
-
-    this.mesh.add(this.targetIndicator);
-  }
 
   update(deltaTime, missilePosition = null) {
     if (!this.isActive || !this.isAlive) return;
@@ -126,10 +111,7 @@ export class Bot extends Entity {
       this.facePosition(missilePosition);
     }
 
-    // Animate target indicator
-    if (this.targetIndicator.visible) {
-      this.targetIndicator.rotation.z += deltaTime * 2;
-    }
+
 
     super.update(deltaTime);
   }
@@ -197,7 +179,7 @@ export class Bot extends Entity {
     this.health = this.maxHealth;
     this.isAlive = true;
     this.isTargeted = false;
-    this.targetIndicator.visible = false;
+    this.isTargeted = false;
 
     if (spawnData) {
       const pos = spawnData.position || spawnData;
@@ -226,7 +208,6 @@ export class Bot extends Entity {
    */
   setTargeted(targeted) {
     this.isTargeted = targeted;
-    this.targetIndicator.visible = targeted;
   }
 
   /**
