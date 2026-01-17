@@ -1,0 +1,17 @@
+{
+  "name": "dodgeball-masters-tjs",
+  "version": "1.0.0",
+  "description": "Dodgeball Masters - Three.js Game",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}

@@ -1,0 +1,447 @@
+/* ============================================
+   Dodgeball Masters - Styles
+   ============================================ */
+
+/* Reset & Base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #1a1a2e;
+}
+
+/* Game Canvas */
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* UI Container */
+#ui-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+}
+
+#ui-container > * {
+  pointer-events: auto;
+}
+
+/* ============================================
+   UI Screens (Menu, Pause, Match End)
+   ============================================ */
+
+.ui-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.menu-content {
+  text-align: center;
+  color: #fff;
+}
+
+/* Main Menu */
+.game-title {
+  font-size: 4rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #3498db, #9b59b6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 0 30px rgba(52, 152, 219, 0.5);
+}
+
+.subtitle {
+  font-size: 1.5rem;
+  color: #7f8c8d;
+  margin-bottom: 3rem;
+  letter-spacing: 0.3em;
+}
+
+/* Menu Buttons */
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.menu-btn {
+  padding: 1rem 3rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: 2px solid #3498db;
+  background: transparent;
+  color: #3498db;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 250px;
+}
+
+.menu-btn:hover {
+  background: #3498db;
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.menu-btn.primary {
+  background: #3498db;
+  color: #fff;
+}
+
+.menu-btn.primary:hover {
+  background: #2980b9;
+  border-color: #2980b9;
+}
+
+/* Controls Info */
+.controls-info {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.controls-info h3 {
+  margin-bottom: 1rem;
+  color: #3498db;
+}
+
+.controls-info ul {
+  list-style: none;
+  text-align: left;
+}
+
+.controls-info li {
+  padding: 0.5rem 0;
+  color: #bdc3c7;
+}
+
+.key {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  background: #2c3e50;
+  border-radius: 4px;
+  font-family: monospace;
+  color: #ecf0f1;
+  margin: 0 0.2rem;
+}
+
+/* ============================================
+   HUD
+   ============================================ */
+
+.ui-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Top HUD */
+.hud-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 1rem;
+}
+
+.score-panel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+}
+
+.team-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 1.5rem;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+}
+
+.player-score {
+  border-left: 4px solid #3498db;
+}
+
+.bot-score {
+  border-left: 4px solid #e74c3c;
+}
+
+.team-label {
+  font-size: 0.8rem;
+  color: #7f8c8d;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.score-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.round-info {
+  padding: 0.5rem 1.5rem;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1.2rem;
+}
+
+/* Bottom HUD */
+.hud-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Health Bar */
+.health-bar-container {
+  width: 300px;
+}
+
+.health-bar {
+  position: relative;
+  width: 100%;
+  height: 25px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 2px solid #2c3e50;
+}
+
+.health-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #27ae60, #2ecc71);
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.health-fill.damage-flash {
+  background: #fff !important;
+}
+
+.health-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Missile Info */
+.missile-info {
+  display: flex;
+  gap: 2rem;
+  color: #bdc3c7;
+  font-size: 0.9rem;
+}
+
+/* ============================================
+   Countdown
+   ============================================ */
+
+.countdown-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.countdown-number {
+  font-size: 8rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 50px rgba(52, 152, 219, 0.8);
+}
+
+.countdown-number.pulse {
+  animation: countdown-pulse 0.5s ease-out;
+}
+
+@keyframes countdown-pulse {
+  from {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   Round Announcement
+   ============================================ */
+
+.round-announcement {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+.round-announcement span {
+  font-size: 4rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  animation: announcement-in 0.5s ease-out;
+}
+
+.round-announcement span.win {
+  color: #2ecc71;
+  text-shadow: 0 0 30px rgba(46, 204, 113, 0.8);
+}
+
+.round-announcement span.lose {
+  color: #e74c3c;
+  text-shadow: 0 0 30px rgba(231, 76, 60, 0.8);
+}
+
+@keyframes announcement-in {
+  from {
+    transform: scale(2);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   Match End Screen
+   ============================================ */
+
+.result-title {
+  font-size: 5rem;
+  font-weight: 900;
+  margin-bottom: 1rem;
+}
+
+.result-title.win {
+  color: #2ecc71;
+  text-shadow: 0 0 50px rgba(46, 204, 113, 0.5);
+}
+
+.result-title.lose {
+  color: #e74c3c;
+  text-shadow: 0 0 50px rgba(231, 76, 60, 0.5);
+}
+
+.final-score {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 2rem;
+}
+
+.score-separator {
+  margin: 0 1rem;
+  color: #7f8c8d;
+}
+
+.match-stats {
+  margin-bottom: 2rem;
+  color: #bdc3c7;
+}
+
+.match-stats p {
+  margin: 0.5rem 0;
+}
+
+/* ============================================
+   Pause Menu
+   ============================================ */
+
+.pause-menu h2 {
+  font-size: 3rem;
+  margin-bottom: 2rem;
+  color: #fff;
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+
+@media (max-width: 768px) {
+  .game-title {
+    font-size: 2.5rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+
+  .menu-btn {
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+    min-width: 200px;
+  }
+
+  .score-value {
+    font-size: 2rem;
+  }
+
+  .health-bar-container {
+    width: 250px;
+  }
+
+  .countdown-number {
+    font-size: 5rem;
+  }
+
+  .result-title {
+    font-size: 3rem;
+  }
+}
