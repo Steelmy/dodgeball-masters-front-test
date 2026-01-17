@@ -19,7 +19,7 @@ export const PLAYER = {
 };
 
 export const BOT = {
-  DEFLECT_RANGE: 2.5,
+  DEFLECT_RANGE: 6,
   PERFECT_DEFLECTION: true, // Bot never misses in training mode
 };
 
@@ -35,8 +35,8 @@ export const MISSILE = {
 };
 
 export const DEFLECTION = {
-  RANGE: 2.5,
-  CONE_ANGLE: Math.PI / 3, // 60 degrees cone
+  RANGE: 6,
+  CONE_ANGLE: Math.PI / 5, // 36 degrees cone
   COOLDOWN: 500, // ms
 };
 

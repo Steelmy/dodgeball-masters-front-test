@@ -247,9 +247,9 @@ export class Game {
     // Update player with arena for collision bounds
     this.player.update(deltaTime, this.arena);
 
-    // Update bot (pass missile position for tracking)
-    const missilePos = this.missile.isActive ? this.missile.getPosition() : null;
-    this.bot.update(deltaTime, missilePos);
+    // Update bot (track missile or player)
+    const targetPos = this.missile.isActive ? this.missile.getPosition() : this.player.getPosition();
+    this.bot.update(deltaTime, targetPos);
 
     // Update missile
     if (this.missile.isActive) {

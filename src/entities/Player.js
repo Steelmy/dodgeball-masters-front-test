@@ -40,6 +40,9 @@ export class Player extends Entity {
     this.facingDirection = new THREE.Vector3(0, 0, -1);
     this.rotationY = 0; // Player rotation controlled by mouse
     this.isMovementLocked = false;
+    this.wasDeflectPressed = false;
+    this.isDeflecting = false;
+    this.deflectActiveTime = 0;
 
     // Visual elements
     this.deflectZoneMesh = null;
@@ -118,17 +121,26 @@ export class Player extends Entity {
       1,
       true
     );
+
+    // Align apex to origin (pivot point)
+    geometry.translate(0, -this.deflectRange / 2, 0);
+
     const material = new THREE.MeshBasicMaterial({
       color: COLORS.DEFLECT_ZONE,
       transparent: true,
       opacity: 0.15,
       side: THREE.DoubleSide,
       depthWrite: false,
+      blending: THREE.AdditiveBlending,
     });
 
     this.deflectZoneMesh = new THREE.Mesh(geometry, material);
+
+    // Initial rotation to point forward
     this.deflectZoneMesh.rotation.x = Math.PI / 2;
-    this.deflectZoneMesh.position.set(0, PLAYER.HEIGHT / 2, -this.deflectRange / 2);
+
+    // Position at Eye Level (matches logical check origin)
+    this.deflectZoneMesh.position.set(0, PLAYER.HEIGHT * 0.75, 0);
     this.deflectZoneMesh.visible = false;
 
     this.mesh.add(this.deflectZoneMesh);
@@ -157,8 +169,19 @@ export class Player extends Entity {
       }
     }
 
+    // Handle deflection input (Single frame trigger)
+    this.isDeflecting = false;
+    const isDeflectPressed = this.inputManager.isDeflectPressed();
+
+    if (isDeflectPressed && !this.wasDeflectPressed && this.canDeflect) {
+      this.isDeflecting = true;
+      this.canDeflect = false;
+      this.deflectCooldown = DEFLECTION.COOLDOWN;
+    }
+    this.wasDeflectPressed = isDeflectPressed;
+
     // Show deflect zone when action key is held (right click)
-    this.deflectZoneMesh.visible = this.inputManager.isDeflectPressed();
+    this.deflectZoneMesh.visible = isDeflectPressed;
 
 
 
@@ -272,7 +295,7 @@ export class Player extends Entity {
    * Returns true if deflection conditions are met
    */
   tryDeflect(missile) {
-    if (!this.canDeflect || !this.isAlive) return false;
+    if (!this.isAlive) return false;
 
     // Can only deflect enemy missiles
     if (missile.teamId === this.team) return false;
@@ -291,9 +314,7 @@ export class Player extends Entity {
       this.deflectRange
     );
 
-    if (inCone && this.inputManager.isDeflectPressed()) {
-      this.canDeflect = false;
-      this.deflectCooldown = DEFLECTION.COOLDOWN;
+    if (inCone && this.isDeflecting) {
       return true;
     }
 

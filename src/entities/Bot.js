@@ -38,7 +38,36 @@ export class Bot extends Entity {
 
   init() {
     this.createMesh();
+    this.createDeflectZone();
+  }
 
+  createDeflectZone() {
+    const geometry = new THREE.ConeGeometry(
+      Math.tan(this.deflectConeAngle) * this.deflectRange,
+      this.deflectRange,
+      16,
+      1,
+      true
+    );
+
+    // Align apex to origin (pivot point)
+    geometry.translate(0, -this.deflectRange / 2, 0);
+
+    const material = new THREE.MeshBasicMaterial({
+      color: COLORS.DEFLECT_ZONE,
+      transparent: true,
+      opacity: 0.15,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+
+    this.deflectZoneMesh = new THREE.Mesh(geometry, material);
+    this.deflectZoneMesh.rotation.x = -Math.PI / 2;
+    this.deflectZoneMesh.position.set(0, PLAYER.HEIGHT * 0.75, 0);
+    this.deflectZoneMesh.visible = false; // Will set in update
+
+    this.mesh.add(this.deflectZoneMesh);
   }
 
   createMesh() {
@@ -69,6 +98,11 @@ export class Bot extends Entity {
     bottom.castShadow = true;
     group.add(bottom);
 
+    // Head Group (for rotation)
+    this.headGroup = new THREE.Group();
+    const headCenterY = PLAYER.HEIGHT - PLAYER.RADIUS * 0.8;
+    this.headGroup.position.y = headCenterY;
+
     // Head sphere
     const headGeometry = new THREE.SphereGeometry(PLAYER.RADIUS * 0.8, 16, 16);
     const headMaterial = new THREE.MeshStandardMaterial({
@@ -77,33 +111,38 @@ export class Bot extends Entity {
       metalness: 0.5,
     });
     const head = new THREE.Mesh(headGeometry, headMaterial);
-    head.position.y = PLAYER.HEIGHT - PLAYER.RADIUS * 0.8;
     head.castShadow = true;
-    group.add(head);
+    this.headGroup.add(head);
 
-    // Eyes (to show bot is facing player)
+    // Eyes
     const eyeGeometry = new THREE.SphereGeometry(0.1, 8, 8);
     const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
+    const eyeY = 0.3 * PLAYER.RADIUS;
+    const eyeZ = PLAYER.RADIUS * 0.6;
+
     const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    leftEye.position.set(-0.2, PLAYER.HEIGHT - PLAYER.RADIUS * 0.5, PLAYER.RADIUS * 0.6);
-    group.add(leftEye);
+    leftEye.position.set(-0.2, eyeY, eyeZ);
+    this.headGroup.add(leftEye);
 
     const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    rightEye.position.set(0.2, PLAYER.HEIGHT - PLAYER.RADIUS * 0.5, PLAYER.RADIUS * 0.6);
-    group.add(rightEye);
+    rightEye.position.set(0.2, eyeY, eyeZ);
+    this.headGroup.add(rightEye);
 
-    // Pupil
+    // Pupils
     const pupilGeometry = new THREE.SphereGeometry(0.05, 8, 8);
     const pupilMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const pupilZ = PLAYER.RADIUS * 0.7;
 
     const leftPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
-    leftPupil.position.set(-0.2, PLAYER.HEIGHT - PLAYER.RADIUS * 0.5, PLAYER.RADIUS * 0.7);
-    group.add(leftPupil);
+    leftPupil.position.set(-0.2, eyeY, pupilZ);
+    this.headGroup.add(leftPupil);
 
     const rightPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
-    rightPupil.position.set(0.2, PLAYER.HEIGHT - PLAYER.RADIUS * 0.5, PLAYER.RADIUS * 0.7);
-    group.add(rightPupil);
+    rightPupil.position.set(0.2, eyeY, pupilZ);
+    this.headGroup.add(rightPupil);
+
+    group.add(this.headGroup);
 
     this.mesh = group;
     this.mesh.position.copy(this.position);
@@ -114,12 +153,15 @@ export class Bot extends Entity {
   update(deltaTime, missilePosition = null) {
     if (!this.isActive || !this.isAlive) return;
 
-    // Bot is stationary but rotates to face the missile if targeted
-    if (missilePosition && this.isTargeted) {
+    // Bot always rotates to face the missile
+    if (missilePosition) {
       this.facePosition(missilePosition);
     }
 
-
+    // Cone is visible if alive (feedback)
+    if (this.deflectZoneMesh) {
+      this.deflectZoneMesh.visible = this.isAlive;
+    }
 
     super.update(deltaTime);
   }
@@ -128,9 +170,27 @@ export class Bot extends Entity {
    * Rotate to face a position
    */
   facePosition(position) {
-    const direction = MathUtils.directionToXZ(this.position, position);
+    const eyePos = this.position.clone();
+    eyePos.y = PLAYER.HEIGHT * 0.75;
+
+    // 3D direction
+    const direction = MathUtils.directionTo(eyePos, position);
     this.facingDirection.copy(direction);
-    this.mesh.rotation.y = Math.atan2(direction.x, direction.z);
+
+    // Yaw (Body follows target horizontally)
+    this.mesh.lookAt(position.x, this.position.y, position.z);
+    this.rotation.copy(this.mesh.rotation); // Sync with Entity state ensures super.update doesn't reset it
+
+    // Pitch (for cone) - direction.y is sine of pitch
+    const pitch = Math.asin(direction.y);
+    if (this.deflectZoneMesh) {
+      // Rot X -90 is forward (+Z). - Pitch to look up.
+      this.deflectZoneMesh.rotation.x = -Math.PI / 2 - pitch;
+    }
+
+    if (this.headGroup) {
+      this.headGroup.rotation.x = -pitch;
+    }
   }
 
   /**
@@ -207,6 +267,7 @@ export class Bot extends Entity {
         );
         if (this.mesh) {
           this.mesh.rotation.y = spawnData.rotation;
+          this.rotation.y = spawnData.rotation;
         }
       }
     }
