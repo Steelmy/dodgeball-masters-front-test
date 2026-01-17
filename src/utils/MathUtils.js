@@ -155,4 +155,26 @@ export const MathUtils = {
   radToDeg(radians) {
     return radians * (180 / Math.PI);
   },
+
+  /**
+   * Calculate distance from a point to a line segment
+   * @param {THREE.Vector3} point - The point
+   * @param {THREE.Vector3} start - Segment start point
+   * @param {THREE.Vector3} end - Segment end point
+   */
+  distanceToSegment(point, start, end) {
+    const ab = new THREE.Vector3().subVectors(end, start);
+    const ap = new THREE.Vector3().subVectors(point, start);
+
+    const lenSq = ab.lengthSq();
+    if (lenSq === 0) return ap.length(); // start and end are the same
+
+    // Project point onto line, clamped between 0 and 1
+    const t = Math.max(0, Math.min(1, ap.dot(ab) / lenSq));
+
+    // Closest point on segment
+    const closest = new THREE.Vector3().copy(start).addScaledVector(ab, t);
+
+    return point.distanceTo(closest);
+  },
 };

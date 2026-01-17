@@ -91,9 +91,15 @@ export class CollisionSystem {
     if (!this.missile.target || !this.missile.target.isAlive) return;
 
     const missilePos = this.missile.getPosition();
+    const missilePrevPos = this.missile.previousPosition || missilePos;
+    
+    // Get target position and adjust to center of mass (chest height)
+    // Default to base position if height not available, but Player/Bot use PLAYER.HEIGHT
     const targetPos = this.missile.target.getPosition();
+    targetPos.y += (PLAYER.HEIGHT / 2);
 
-    const distance = MathUtils.distance(missilePos, targetPos);
+    // Use continuous collision detection (segment vs sphere) to prevent tunneling
+    const distance = MathUtils.distanceToSegment(targetPos, missilePrevPos, missilePos);
     const collisionThreshold = MISSILE.RADIUS + PLAYER.RADIUS;
 
     if (distance < collisionThreshold) {

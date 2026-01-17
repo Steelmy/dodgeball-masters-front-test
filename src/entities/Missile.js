@@ -29,6 +29,7 @@ export class Missile extends Entity {
     this.deflectionCount = 0;
     this.direction = new THREE.Vector3(0, 0, 1);
     this.teamId = null;
+    this.previousPosition = new THREE.Vector3();
 
     // Visual
     this.trailParticles = [];
@@ -39,6 +40,7 @@ export class Missile extends Entity {
   init() {
     this.createMesh();
     this.createTrail();
+    this.previousPosition.copy(this.position);
   }
 
   createMesh() {
@@ -99,6 +101,9 @@ export class Missile extends Entity {
 
   update(deltaTime) {
     if (!this.isActive || !this.target) return;
+
+    // Store previous position for collision detection
+    this.previousPosition.copy(this.position);
 
     // Update target position
     if (this.target.getPosition) {
@@ -225,6 +230,7 @@ export class Missile extends Entity {
 
     // Reset to spawn position
     this.setPosition(0, MISSILE.SPAWN_HEIGHT, 0);
+    this.previousPosition.copy(this.position);
 
     if (this.mesh) {
       this.mesh.visible = true;
