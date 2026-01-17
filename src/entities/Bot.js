@@ -45,10 +45,11 @@ export class Bot extends Entity {
     const group = new THREE.Group();
 
     // Body cylinder
+    const bodyHeight = PLAYER.HEIGHT - PLAYER.RADIUS * 2;
     const bodyGeometry = new THREE.CylinderGeometry(
       PLAYER.RADIUS,
       PLAYER.RADIUS,
-      PLAYER.HEIGHT - PLAYER.RADIUS * 2,
+      bodyHeight,
       16
     );
     const bodyMaterial = new THREE.MeshStandardMaterial({
@@ -61,6 +62,13 @@ export class Bot extends Entity {
     body.castShadow = true;
     group.add(body);
 
+    // Bottom sphere
+    const bottomGeometry = new THREE.SphereGeometry(PLAYER.RADIUS, 16, 16);
+    const bottom = new THREE.Mesh(bottomGeometry, bodyMaterial);
+    bottom.position.y = PLAYER.RADIUS;
+    bottom.castShadow = true;
+    group.add(bottom);
+
     // Head sphere
     const headGeometry = new THREE.SphereGeometry(PLAYER.RADIUS * 0.8, 16, 16);
     const headMaterial = new THREE.MeshStandardMaterial({
@@ -69,7 +77,7 @@ export class Bot extends Entity {
       metalness: 0.5,
     });
     const head = new THREE.Mesh(headGeometry, headMaterial);
-    head.position.y = PLAYER.HEIGHT - PLAYER.RADIUS * 0.5;
+    head.position.y = PLAYER.HEIGHT - PLAYER.RADIUS * 0.8;
     head.castShadow = true;
     group.add(head);
 

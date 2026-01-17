@@ -57,10 +57,11 @@ export class Player extends Entity {
     const group = new THREE.Group();
 
     // Body cylinder
+    const bodyHeight = PLAYER.HEIGHT - PLAYER.RADIUS * 2;
     const bodyGeometry = new THREE.CylinderGeometry(
       PLAYER.RADIUS,
       PLAYER.RADIUS,
-      PLAYER.HEIGHT - PLAYER.RADIUS * 2,
+      bodyHeight,
       16
     );
     const bodyMaterial = new THREE.MeshStandardMaterial({
@@ -73,6 +74,13 @@ export class Player extends Entity {
     body.castShadow = true;
     group.add(body);
 
+    // Bottom sphere (legs/base)
+    const bottomGeometry = new THREE.SphereGeometry(PLAYER.RADIUS, 16, 16);
+    const bottom = new THREE.Mesh(bottomGeometry, bodyMaterial);
+    bottom.position.y = PLAYER.RADIUS;
+    bottom.castShadow = true;
+    group.add(bottom);
+
     // Head sphere
     const headGeometry = new THREE.SphereGeometry(PLAYER.RADIUS * 0.8, 16, 16);
     const headMaterial = new THREE.MeshStandardMaterial({
@@ -81,7 +89,7 @@ export class Player extends Entity {
       metalness: 0.5,
     });
     const head = new THREE.Mesh(headGeometry, headMaterial);
-    head.position.y = PLAYER.HEIGHT - PLAYER.RADIUS * 0.5;
+    head.position.y = PLAYER.HEIGHT - PLAYER.RADIUS * 0.8; // Align with top
     head.castShadow = true;
     group.add(head);
 
