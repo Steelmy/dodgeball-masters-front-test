@@ -1,5 +1,6 @@
 import { globalEvents } from '../utils/EventEmitter.js';
-import { EVENTS, GAME_STATES } from '../utils/Constants.js';
+import { EVENTS, GAME_STATES, PLAYER } from '../utils/Constants.js';
+import { MathUtils } from '../utils/MathUtils.js';
 
 /**
  * UIManager
@@ -44,6 +45,7 @@ export class UIManager {
     globalEvents.on(EVENTS.MATCH_END, (data) => this.onMatchEnd(data));
     globalEvents.on(EVENTS.PLAYER_DAMAGE, (data) => this.onPlayerDamage(data));
     globalEvents.on(EVENTS.MISSILE_DEFLECT, (data) => this.onDeflection(data));
+    globalEvents.on(EVENTS.MISSILE_SPAWN, () => this.resetMissileStats());
 
     globalEvents.on(`state:${GAME_STATES.PLAYING}`, () => this.onGamePlaying());
     globalEvents.on(`state:${GAME_STATES.PAUSED}`, () => this.showPauseMenu());
@@ -223,7 +225,7 @@ export class UIManager {
   }
 
   onPlayerDamage(data) {
-    this.updateHealth(data.health);
+    this.updateHealth(data.health, PLAYER.MAX_HEALTH);
 
     // Flash health bar red
     const healthFill = document.getElementById('health-fill');
@@ -239,22 +241,20 @@ export class UIManager {
 
   // UI Update Methods
 
-  updateHealth(health) {
+  updateHealth(health, maxHealth = 100) {
     const fill = document.getElementById('health-fill');
     const text = document.getElementById('health-text');
-    const percentage = Math.max(0, health);
+    
+    // Clamp health between 0 and maxHealth
+    const clampedHealth = MathUtils.clamp(health, 0, maxHealth);
+    const percentage = (clampedHealth / maxHealth) * 100;
 
     fill.style.width = `${percentage}%`;
-    text.textContent = Math.round(percentage);
+    text.textContent = Math.round(clampedHealth);
 
-    // Change color based on health
-    if (percentage > 50) {
-      fill.style.background = 'linear-gradient(90deg, #27ae60, #2ecc71)';
-    } else if (percentage > 25) {
-      fill.style.background = 'linear-gradient(90deg, #f39c12, #f1c40f)';
-    } else {
-      fill.style.background = 'linear-gradient(90deg, #c0392b, #e74c3c)';
-    }
+    // Smooth color transition from green (120) to red (0)
+    const hue = (percentage / 100) * 120;
+    fill.style.background = `linear-gradient(90deg, hsl(${hue}, 70%, 50%), hsl(${hue}, 80%, 45%))`;
   }
 
   updateScores(playerScore, botScore) {
@@ -263,7 +263,11 @@ export class UIManager {
   }
 
   resetHUD() {
-    this.updateHealth(100);
+    this.updateHealth(PLAYER.MAX_HEALTH, PLAYER.MAX_HEALTH);
+    this.resetMissileStats();
+  }
+
+  resetMissileStats() {
     document.getElementById('missile-speed').textContent = 'Speed: 1.0x';
     document.getElementById('deflection-count').textContent = 'Deflections: 0';
   }

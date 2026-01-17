@@ -89,8 +89,34 @@ export class RoundManager {
    * Handle missile hit event
    */
   onMissileHit(data) {
-    // Check if the hit resulted in a death
-    // Death handling is done through the entity death events
+    // Check if the hit resulted in a death (round end)
+    // We check if both are alive because if one died, the round end logic will handle it
+    if (!this.areBothAlive()) return;
+
+    const hitEntity = data.target;
+
+    // Requirement: "Le missile choisira forcément l'équipe adverse au joueur qui a été touché en dernier."
+    // (The missile will choose the team opposite to the player who was last hit)
+    // If Player was hit -> Opposite is Bot Team -> Missile belongs to Bot -> Targets Player
+    // If Bot was hit -> Opposite is Player Team -> Missile belongs to Player -> Targets Bot
+    
+    const newTeam = hitEntity === this.player ? TEAMS.BOT : TEAMS.PLAYER;
+    const newTarget = hitEntity; 
+
+    // Spawn new missile immediately
+    this.missile.spawn(newTarget, newTeam);
+
+    // Update target indicator
+    newTarget.setTargeted(true);
+
+    // Play sound if player is targeted
+    if (newTarget === this.player && this.audioManager) {
+      this.audioManager.play('targeted');
+    }
+
+    globalEvents.emit(EVENTS.MISSILE_SPAWN, {
+      target: newTarget === this.player ? 'player' : 'bot',
+    });
   }
 
   /**

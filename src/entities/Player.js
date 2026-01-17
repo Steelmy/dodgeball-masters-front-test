@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { Entity } from './Entity.js';
-import { PLAYER, COLORS, DEFLECTION, TEAMS } from '../utils/Constants.js';
+import { PLAYER, COLORS, DEFLECTION, TEAMS, EVENTS } from '../utils/Constants.js';
 import { MathUtils } from '../utils/MathUtils.js';
+import { globalEvents } from '../utils/EventEmitter.js';
 
 /**
  * Player
@@ -329,6 +330,9 @@ export class Player extends Entity {
 
     this.health -= amount;
     this.emit('damage', { amount, health: this.health });
+    
+    // Emit global event for UI
+    globalEvents.emit(EVENTS.PLAYER_DAMAGE, { amount, health: this.health });
 
     if (this.health <= 0) {
       this.health = 0;
