@@ -85,7 +85,7 @@ export class CameraController {
       this.yaw -= mouseDelta.x;
 
       // Update pitch (vertical) - with limits
-      this.pitch -= mouseDelta.y;
+      this.pitch += mouseDelta.y;
       this.pitch = MathUtils.clamp(this.pitch, this.minPitch, this.maxPitch);
     }
 

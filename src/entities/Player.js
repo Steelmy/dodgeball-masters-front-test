@@ -151,6 +151,9 @@ export class Player extends Entity {
     // Handle movement input
     this.handleMovement(deltaTime, arena);
 
+    // Handle rotation (always face camera direction)
+    this.handleRotation();
+
     // Handle jump
     this.handleJump(deltaTime);
 
@@ -204,19 +207,31 @@ export class Player extends Entity {
         // Apply movement
         this.position.x += moveDirection.x * this.moveSpeed * deltaTime;
         this.position.z += moveDirection.z * this.moveSpeed * deltaTime;
-
-        // Rotate player to face movement direction
-        this.rotationY = Math.atan2(moveDirection.x, moveDirection.z);
-        this.mesh.rotation.y = this.rotationY;
-
-        // Update facing direction
-        this.facingDirection.copy(moveDirection);
       }
 
       // Constrain to circular arena bounds
       if (arena && arena.constrainToBounds) {
         arena.constrainToBounds(this.position, PLAYER.RADIUS);
       }
+    }
+  }
+
+  handleRotation() {
+    if (this.cameraController) {
+      // Get camera yaw
+      this.rotationY = this.cameraController.getYaw();
+
+      // Update mesh rotation
+      if (this.mesh) {
+        this.mesh.rotation.y = this.rotationY;
+      }
+
+      // Update facing direction based on rotation
+      this.facingDirection.set(
+        -Math.sin(this.rotationY),
+        0,
+        -Math.cos(this.rotationY)
+      );
     }
   }
 
