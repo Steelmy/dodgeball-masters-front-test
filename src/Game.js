@@ -126,24 +126,65 @@ export class Game {
   }
 
   setupEventListeners() {
-    // Pause when pointer lock is lost (Escape releases pointer lock)
+    // Pointer lock handles the Pause/Resume state transitions to avoid race conditions
     this.inputManager.on('pointerlockchange', (isLocked) => {
-      if (!isLocked && this.gameStateManager.isState(GAME_STATES.PLAYING)) {
+      const currentState = this.gameStateManager.getState();
+      
+      if (isLocked) {
+        // If we just acquired the lock and were paused, resume
+        if (currentState === GAME_STATES.PAUSED) {
+          this.gameStateManager.resume();
+          this.uiManager.hidePauseMenu();
+        }
+      } else {
+        // If we just lost the lock and were in an active game state, pause
+        if (currentState !== GAME_STATES.MENU && 
+            currentState !== GAME_STATES.PAUSED && 
+            currentState !== GAME_STATES.MATCH_END) {
+          
+          this.gameStateManager.pause();
+          this.uiManager.showPauseMenu();
+        }
+      }
+    });
+
+    // Handle pointer lock errors
+    this.inputManager.on('pointerlockerror', () => {
+      // If we failed to get the lock while trying to resume, make sure we stay/return to pause menu
+      if (!this.gameStateManager.isState(GAME_STATES.PAUSED) && 
+          !this.gameStateManager.isState(GAME_STATES.MENU)) {
         this.gameStateManager.pause();
         this.uiManager.showPauseMenu();
       }
     });
 
     // Listen for state changes
-    globalEvents.on(`state:${GAME_STATES.PLAYING}`, () => {
-      this.roundManager.startRoundGameplay();
-      // Unlock movement when game starts
+    globalEvents.on(`state:${GAME_STATES.PLAYING}`, (data) => {
+      // Only start gameplay logic (missile spawn) if coming from countdown
+      if (data && data.previousState === GAME_STATES.COUNTDOWN) {
+        this.roundManager.startRoundGameplay();
+      }
+      // Always unlock movement when entering playing state (start or resume)
       this.player.setMovementLocked(false);
     });
 
     globalEvents.on(`state:${GAME_STATES.COUNTDOWN}`, () => {
       // Lock movement during countdown
       this.player.setMovementLocked(true);
+    });
+
+    // Handle Escape key
+    this.inputManager.on('keydown', ({ key }) => {
+      if (key === 'Escape') {
+        const currentState = this.gameStateManager.getState();
+        
+        // If Paused, try to Resume
+        if (currentState === GAME_STATES.PAUSED) {
+          this.resumeGame();
+        }
+        // If Playing/Countdown/RoundEnd, browser's native Escape will unlock pointer
+        // which triggers our pointerlockchange -> pause flow.
+      }
     });
 
     globalEvents.on(EVENTS.ROUND_START, () => {
@@ -176,9 +217,7 @@ export class Game {
   }
 
   resumeGame() {
-    this.gameStateManager.resume();
-    this.uiManager.hidePauseMenu();
-    // Re-lock pointer
+    // Only request lock. The pointerlockchange listener will handle the state resume.
     this.inputManager.requestPointerLock(this.canvas);
   }
 

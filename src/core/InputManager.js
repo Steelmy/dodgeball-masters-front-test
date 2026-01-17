@@ -44,7 +44,9 @@ export class InputManager extends EventEmitter {
 
     // Pointer lock events
     this.onPointerLockChange = this.onPointerLockChange.bind(this);
+    this.onPointerLockError = this.onPointerLockError.bind(this);
     document.addEventListener('pointerlockchange', this.onPointerLockChange);
+    document.addEventListener('pointerlockerror', this.onPointerLockError);
 
     // Prevent context menu on right click
     window.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -80,6 +82,11 @@ export class InputManager extends EventEmitter {
   onPointerLockChange() {
     this.isPointerLocked = document.pointerLockElement !== null;
     this.emit('pointerlockchange', this.isPointerLocked);
+  }
+
+  onPointerLockError() {
+    console.warn('Pointer lock failed/error');
+    this.emit('pointerlockerror');
   }
 
   onMouseDown(event) {

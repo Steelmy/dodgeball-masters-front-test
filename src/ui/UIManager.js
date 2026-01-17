@@ -47,7 +47,7 @@ export class UIManager {
     globalEvents.on(EVENTS.MISSILE_DEFLECT, (data) => this.onDeflection(data));
     globalEvents.on(EVENTS.MISSILE_SPAWN, () => this.resetMissileStats());
 
-    globalEvents.on(`state:${GAME_STATES.PLAYING}`, () => this.onGamePlaying());
+    globalEvents.on(`state:${GAME_STATES.PLAYING}`, (data) => this.onGamePlaying(data));
     globalEvents.on(`state:${GAME_STATES.PAUSED}`, () => this.showPauseMenu());
     globalEvents.on(`state:${GAME_STATES.MENU}`, () => this.showMainMenu());
   }
@@ -185,17 +185,20 @@ export class UIManager {
     number.classList.add('pulse');
   }
 
-  onGamePlaying() {
+  onGamePlaying(data) {
+    this.hidePauseMenu();
     this.countdown.style.display = 'none';
     this.hud.style.display = 'block';
 
-    // Show GO!
-    const number = document.getElementById('countdown-number');
-    number.textContent = 'GO!';
-    this.countdown.style.display = 'flex';
-    setTimeout(() => {
-      this.countdown.style.display = 'none';
-    }, 500);
+    // Only show GO! if coming from countdown
+    if (data && data.previousState === GAME_STATES.COUNTDOWN) {
+      const number = document.getElementById('countdown-number');
+      number.textContent = 'GO!';
+      this.countdown.style.display = 'flex';
+      setTimeout(() => {
+        this.countdown.style.display = 'none';
+      }, 500);
+    }
   }
 
   onRoundEnd(data) {

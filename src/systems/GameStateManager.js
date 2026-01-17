@@ -10,6 +10,7 @@ export class GameStateManager {
   constructor() {
     this.currentState = GAME_STATES.MENU;
     this.previousState = null;
+    this.stateBeforePause = null;
 
     // Match state
     this.playerScore = 0;
@@ -174,7 +175,13 @@ export class GameStateManager {
    * Pause game
    */
   pause() {
-    if (this.currentState === GAME_STATES.PLAYING) {
+    // Allow pausing during Gameplay, Countdown, or Round End
+    if (
+      this.currentState === GAME_STATES.PLAYING || 
+      this.currentState === GAME_STATES.COUNTDOWN || 
+      this.currentState === GAME_STATES.ROUND_END
+    ) {
+      this.stateBeforePause = this.currentState;
       this.setState(GAME_STATES.PAUSED);
       globalEvents.emit(EVENTS.GAME_PAUSE);
     }
@@ -185,7 +192,9 @@ export class GameStateManager {
    */
   resume() {
     if (this.currentState === GAME_STATES.PAUSED) {
-      this.setState(GAME_STATES.PLAYING);
+      // Restore the state we were in before pausing
+      const targetState = this.stateBeforePause || GAME_STATES.PLAYING;
+      this.setState(targetState);
       globalEvents.emit(EVENTS.GAME_RESUME);
     }
   }
