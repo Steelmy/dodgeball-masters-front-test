@@ -144,6 +144,13 @@ export class CameraController {
   }
 
   /**
+   * Get current pitch angle
+   */
+  getPitch() {
+    return this.pitch;
+  }
+
+  /**
    * Set camera to TPS mode following a player
    */
   setTPSMode(player) {

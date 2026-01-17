@@ -200,20 +200,28 @@ export class Player extends Entity {
 
   handleRotation() {
     if (this.cameraController) {
-      // Get camera yaw
+      // Get camera rotation
       this.rotationY = this.cameraController.getYaw();
+      const pitch = this.cameraController.getPitch();
 
-      // Update mesh rotation
+      // Update mesh rotation (yaw only)
       if (this.mesh) {
         this.mesh.rotation.y = this.rotationY;
       }
 
-      // Update facing direction based on rotation
+      // Update deflect cone rotation (pitch)
+      if (this.deflectZoneMesh) {
+        // Base rotation is PI/2. Subtract pitch because... Three.js rotations.
+        this.deflectZoneMesh.rotation.x = Math.PI / 2 - pitch;
+      }
+
+      // Update facing direction based on rotation (3D)
+      // Pitch is positive when looking down, so Y component is negative sine
       this.facingDirection.set(
-        -Math.sin(this.rotationY),
-        0,
-        -Math.cos(this.rotationY)
-      );
+        -Math.sin(this.rotationY) * Math.cos(pitch),
+        -Math.sin(pitch),
+        -Math.cos(this.rotationY) * Math.cos(pitch)
+      ).normalize();
     }
   }
 
