@@ -175,9 +175,24 @@ export class CameraController {
   /**
    * Reset camera rotation
    */
-  resetRotation() {
-    this.yaw = 0;
+  resetRotation(yaw = 0) {
+    this.yaw = yaw;
     this.pitch = 0;
+  }
+
+  /**
+   * Set camera rotation
+   */
+  setRotation(yaw, pitch) {
+    if (yaw !== undefined) this.yaw = yaw;
+    if (pitch !== undefined) this.pitch = pitch;
+  }
+
+  /**
+   * Set camera yaw
+   */
+  setYaw(yaw) {
+    this.yaw = yaw;
   }
 
   getCamera() {

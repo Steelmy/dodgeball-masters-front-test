@@ -153,6 +153,10 @@ export class Game {
 
       // Switch to TPS camera following the player
       this.cameraController.setTPSMode(this.player);
+
+      // Set initial rotation from spawn data
+      const spawnPositions = this.arena.getSpawnPositions();
+      this.cameraController.setRotation(spawnPositions.player.rotation, Math.PI / 12);
     });
 
   }
@@ -164,7 +168,6 @@ export class Game {
 
     // Set TPS camera to follow player
     this.cameraController.setTPSMode(this.player);
-    this.cameraController.resetRotation();
 
     // Lock pointer for mouse look
     this.inputManager.requestPointerLock(this.canvas);

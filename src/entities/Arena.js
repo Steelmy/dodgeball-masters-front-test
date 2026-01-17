@@ -208,11 +208,11 @@ export class Arena {
     return {
       player: {
         position: new THREE.Vector3(0, 0, -this.radius / 2),
-        rotation: 0, // Facing positive Z (toward center)
+        rotation: Math.PI, // Facing positive Z (toward center)
       },
       bot: {
         position: new THREE.Vector3(0, 0, this.radius / 2),
-        rotation: Math.PI, // Facing negative Z (toward center)
+        rotation: 0, // Facing negative Z (toward center)
       },
     };
   }
