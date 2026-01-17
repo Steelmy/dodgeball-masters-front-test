@@ -129,8 +129,13 @@ export class Bot extends Entity {
    * Check if bot should deflect the missile
    * Bot has perfect deflection - always succeeds when missile is in range
    */
-  tryDeflect(missilePosition) {
+  tryDeflect(missile) {
     if (!this.isAlive) return false;
+
+    // Can only deflect enemy missiles
+    if (missile.teamId === this.team) return false;
+
+    const missilePosition = missile.getPosition();
 
     // Calculate distance to missile
     const distance = MathUtils.distanceXZ(this.position, missilePosition);

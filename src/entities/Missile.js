@@ -28,6 +28,7 @@ export class Missile extends Entity {
     // State
     this.deflectionCount = 0;
     this.direction = new THREE.Vector3(0, 0, 1);
+    this.teamId = null;
 
     // Visual
     this.trailParticles = [];
@@ -231,11 +232,45 @@ export class Missile extends Entity {
   }
 
   /**
+   * Set missile team
+   */
+  setTeam(teamId) {
+    this.teamId = teamId;
+
+    const color = teamId === 'player' ? COLORS.TEAM_PLAYER : COLORS.TEAM_BOT;
+
+    // Update mesh color
+    if (this.mesh) {
+      // Body (child 0)
+      if (this.mesh.children[0] && this.mesh.children[0].material) {
+        this.mesh.children[0].material.color.setHex(color);
+        this.mesh.children[0].material.emissive.setHex(color);
+      }
+
+      // Glow (child 1)
+      if (this.mesh.children[1] && this.mesh.children[1].material) {
+        this.mesh.children[1].material.color.setHex(color);
+      }
+
+      // Light (child 2)
+      if (this.mesh.children[2]) {
+        this.mesh.children[2].color.setHex(color);
+      }
+    }
+
+    // Update trail color
+    if (this.trail && this.trail.material) {
+      this.trail.material.color.setHex(color);
+    }
+  }
+
+  /**
    * Spawn missile at center of arena
    */
-  spawn(initialTarget) {
+  spawn(initialTarget, teamId) {
     this.reset();
     this.setTarget(initialTarget);
+    this.setTeam(teamId);
     this.isActive = true;
 
     // Initial direction toward target

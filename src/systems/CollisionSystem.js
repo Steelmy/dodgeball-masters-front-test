@@ -34,8 +34,8 @@ export class CollisionSystem {
     const missilePos = this.missile.getPosition();
 
     // Check deflection from player
-    if (this.player.isAlive && this.missile.target !== this.player) {
-      if (this.player.tryDeflect(missilePos)) {
+    if (this.player.isAlive && this.missile.target === this.player) {
+      if (this.player.tryDeflect(this.missile)) {
         this.handleDeflection(this.player, this.bot);
       }
     }
@@ -47,7 +47,7 @@ export class CollisionSystem {
 
     // Bot deflection when targeted
     if (this.bot.isAlive && this.missile.target === this.bot) {
-      if (this.bot.tryDeflect(missilePos)) {
+      if (this.bot.tryDeflect(this.missile)) {
         this.handleDeflection(this.bot, this.player);
       }
     }
@@ -62,6 +62,9 @@ export class CollisionSystem {
   handleDeflection(deflector, newTarget) {
     // Deflect missile to furthest enemy (in 1v1, it's always the other one)
     this.missile.deflect(newTarget);
+
+    // Switch missile team to deflector's team
+    this.missile.setTeam(deflector.team);
 
     // Update target indicators
     deflector.setTargeted(false);

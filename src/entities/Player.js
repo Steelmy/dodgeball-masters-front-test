@@ -263,12 +263,20 @@ export class Player extends Entity {
    * Attempt to deflect the missile
    * Returns true if deflection conditions are met
    */
-  tryDeflect(missilePosition) {
+  tryDeflect(missile) {
     if (!this.canDeflect || !this.isAlive) return false;
 
-    // Check if missile is in deflect cone
+    // Can only deflect enemy missiles
+    if (missile.teamId === this.team) return false;
+
+    const missilePosition = missile.getPosition();
+
+    // Check if missile is in deflect cone (use approx eye position for better feel)
+    const eyePos = this.position.clone();
+    eyePos.y += PLAYER.HEIGHT * 0.75;
+
     const inCone = MathUtils.isInCone(
-      this.position,
+      eyePos,
       this.facingDirection,
       missilePosition,
       this.deflectConeAngle,

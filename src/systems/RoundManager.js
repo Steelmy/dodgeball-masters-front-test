@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { globalEvents } from '../utils/EventEmitter.js';
-import { EVENTS, GAME_STATES } from '../utils/Constants.js';
+import { EVENTS, GAME_STATES, TEAMS } from '../utils/Constants.js';
 import { MathUtils } from '../utils/MathUtils.js';
 
 /**
@@ -69,7 +69,8 @@ export class RoundManager {
     const initialTarget = MathUtils.randomElement(targets);
 
     // Spawn missile
-    this.missile.spawn(initialTarget);
+    const initialTeam = initialTarget === this.player ? TEAMS.BOT : TEAMS.PLAYER;
+    this.missile.spawn(initialTarget, initialTeam);
 
     // Set target indicator
     initialTarget.setTargeted(true);

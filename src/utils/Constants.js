@@ -55,10 +55,12 @@ export const CAMERA = {
 };
 
 export const COLORS = {
-  PLAYER: 0x3498db,
-  BOT: 0xe74c3c,
-  MISSILE: 0xf39c12,
-  MISSILE_TRAIL: 0xff6b00,
+  PLAYER: 0x3498db, // Blue
+  BOT: 0xff8c00,    // Dark Orange
+  MISSILE: 0xffffff, // White (neutral/unused)
+  MISSILE_TRAIL: 0xffffff,
+  TEAM_PLAYER: 0x3498db,
+  TEAM_BOT: 0xff8c00,
   ARENA_FLOOR: 0xf5f5f5,
   ARENA_WALL: 0xe0e0e0,
   ARENA_LINE: 0x3498db,
