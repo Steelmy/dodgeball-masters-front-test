@@ -208,11 +208,7 @@ export class Missile extends Entity {
       this.speed = Math.min(this.speed, MISSILE.MAX_SPEED);
     }
 
-    // Turn rate: base + (increment * deflections)
-    this.turnRate = Math.min(
-      MISSILE.TURN_RATE + (MISSILE.TURN_RATE_INCREMENT * this.deflectionCount),
-      MISSILE.MAX_TURN_RATE
-    );
+    this.turnRate = MISSILE.TURN_RATE
 
     // Damage: base + (increment * deflections)
     this.damage = MISSILE.BASE_DAMAGE + (MISSILE.DAMAGE_INCREMENT * this.deflectionCount);
