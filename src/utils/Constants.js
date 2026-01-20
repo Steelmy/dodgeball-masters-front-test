@@ -12,8 +12,8 @@ export const GAME = {
 export const PLAYER = {
   MAX_HEALTH: 100,
   MOVE_SPEED: 10,
-  RADIUS: 0.4,
-  HEIGHT: 1.8,
+  RADIUS: 0.3,
+  HEIGHT: 1.35,
   JUMP_FORCE: 12,
   GRAVITY: 30,
 };
