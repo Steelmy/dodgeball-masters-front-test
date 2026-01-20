@@ -40,7 +40,7 @@ export const MISSILE = {
 };
 
 export const DEFLECTION = {
-  RANGE: 6,
+  RANGE: 8,
   CONE_ANGLE: Math.PI / 5, // 36 degrees cone
   COOLDOWN: 500, // ms
 
