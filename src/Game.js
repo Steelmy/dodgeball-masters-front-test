@@ -132,7 +132,7 @@ export class Game {
     // Pointer lock handles the Pause/Resume state transitions to avoid race conditions
     this.inputManager.on('pointerlockchange', (isLocked) => {
       const currentState = this.gameStateManager.getState();
-      
+
       if (isLocked) {
         // If we just acquired the lock and were paused, resume
         if (currentState === GAME_STATES.PAUSED) {
@@ -141,10 +141,10 @@ export class Game {
         }
       } else {
         // If we just lost the lock and were in an active game state, pause
-        if (currentState !== GAME_STATES.MENU && 
-            currentState !== GAME_STATES.PAUSED && 
-            currentState !== GAME_STATES.MATCH_END) {
-          
+        if (currentState !== GAME_STATES.MENU &&
+          currentState !== GAME_STATES.PAUSED &&
+          currentState !== GAME_STATES.MATCH_END) {
+
           this.gameStateManager.pause();
           this.uiManager.showPauseMenu();
         }
@@ -154,8 +154,8 @@ export class Game {
     // Handle pointer lock errors
     this.inputManager.on('pointerlockerror', () => {
       // If we failed to get the lock while trying to resume, make sure we stay/return to pause menu
-      if (!this.gameStateManager.isState(GAME_STATES.PAUSED) && 
-          !this.gameStateManager.isState(GAME_STATES.MENU)) {
+      if (!this.gameStateManager.isState(GAME_STATES.PAUSED) &&
+        !this.gameStateManager.isState(GAME_STATES.MENU)) {
         this.gameStateManager.pause();
         this.uiManager.showPauseMenu();
       }
@@ -180,7 +180,7 @@ export class Game {
     this.inputManager.on('keydown', ({ key }) => {
       if (key === 'Escape') {
         const currentState = this.gameStateManager.getState();
-        
+
         // If Paused, try to Resume
         if (currentState === GAME_STATES.PAUSED) {
           this.resumeGame();
@@ -195,8 +195,8 @@ export class Game {
       this.player.getMesh().visible = true;
       this.bot.getMesh().visible = true;
 
-      // Switch to TPS camera following the player
-      this.cameraController.setTPSMode(this.player);
+      // Apply saved camera mode (respects user preference)
+      this.cameraController.applySavedMode(this.player);
 
       // Set initial rotation from spawn data
       const spawnPositions = this.arena.getSpawnPositions();
@@ -210,8 +210,8 @@ export class Game {
     this.player.getMesh().visible = true;
     this.bot.getMesh().visible = true;
 
-    // Set TPS camera to follow player
-    this.cameraController.setTPSMode(this.player);
+    // Apply saved camera mode (respects user preference)
+    this.cameraController.applySavedMode(this.player);
 
     // Lock pointer for mouse look
     this.inputManager.requestPointerLock(this.canvas);

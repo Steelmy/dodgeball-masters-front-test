@@ -1,11 +1,13 @@
 import * as THREE from 'three';
-import { CAMERA } from '../utils/Constants.js';
+import { CAMERA, PLAYER } from '../utils/Constants.js';
 import { MathUtils } from '../utils/MathUtils.js';
 
 /**
  * CameraController
- * Third-Person camera with full mouse look control
+ * First-Person / Third-Person camera with full mouse look control
  */
+
+const CAMERA_MODE_STORAGE_KEY = 'dodgeball_camera_mode';
 
 export class CameraController {
   constructor() {
@@ -19,6 +21,9 @@ export class CameraController {
     // Target to follow
     this.target = null;
 
+    // Camera mode: 'fps' or 'tps' - load from localStorage or default to 'tps'
+    this.mode = this.loadSavedMode();
+
     // Camera rotation (controlled by mouse)
     this.yaw = 0;   // Horizontal rotation (no limit, 360°)
     this.pitch = 0; // Vertical rotation (limited)
@@ -27,10 +32,13 @@ export class CameraController {
     this.minPitch = -Math.PI * 0.4;  // Looking up (~72°)
     this.maxPitch = Math.PI * 0.45;   // Looking down (~81°)
 
-    // Camera distance and offset from target
+    // Camera distance and offset from target (TPS mode)
     this.distance = 12;
     this.heightOffset = 2; // Height above target to look at
     this.targetOffset = new THREE.Vector3(0, 1.5, 0); // Offset on target
+
+    // FPS settings
+    this.fpsHeightOffset = PLAYER.HEIGHT * 0.9; // Eye level
 
     // Smoothing
     this.currentPosition = new THREE.Vector3();
@@ -64,6 +72,16 @@ export class CameraController {
    */
   setInputManager(inputManager) {
     this.inputManager = inputManager;
+
+    // Listen for 'F' key to toggle camera mode
+    if (this.inputManager) {
+      this.inputManager.on('keydown', ({ key }) => {
+        if (key === 'KeyF') {
+          const newMode = this.toggleMode();
+          console.log(`Camera mode switched to: ${newMode.toUpperCase()}`);
+        }
+      });
+    }
   }
 
   /**
@@ -71,6 +89,8 @@ export class CameraController {
    */
   setTarget(target) {
     this.target = target;
+    // Apply mesh visibility based on current mode (important when loading saved mode)
+    this.updateTargetMeshVisibility();
   }
 
   /**
@@ -91,6 +111,45 @@ export class CameraController {
 
     if (!this.target) return;
 
+    if (this.mode === 'fps') {
+      this.updateFPS();
+    } else {
+      this.updateTPS();
+    }
+  }
+
+  /**
+   * Update camera in First-Person mode
+   */
+  updateFPS() {
+    // Position camera at player's eye level
+    const targetPos = this.target.position ? this.target.position.clone() : new THREE.Vector3();
+
+    const desiredPosition = new THREE.Vector3(
+      targetPos.x,
+      targetPos.y + this.fpsHeightOffset,
+      targetPos.z
+    );
+
+    // Instant position in FPS (no smoothing for responsiveness)
+    this.camera.position.copy(desiredPosition);
+    this.currentPosition.copy(desiredPosition);
+
+    // Look direction based on yaw and pitch
+    const lookDirection = new THREE.Vector3(
+      -Math.sin(this.yaw) * Math.cos(this.pitch),
+      -Math.sin(this.pitch),
+      -Math.cos(this.yaw) * Math.cos(this.pitch)
+    );
+
+    const lookTarget = desiredPosition.clone().add(lookDirection);
+    this.camera.lookAt(lookTarget);
+  }
+
+  /**
+   * Update camera in Third-Person mode
+   */
+  updateTPS() {
     // Get target position
     const targetPos = this.target.position ? this.target.position.clone() : new THREE.Vector3();
     targetPos.add(this.targetOffset);
@@ -154,10 +213,102 @@ export class CameraController {
    * Set camera to TPS mode following a player
    */
   setTPSMode(player) {
+    this.mode = 'tps';
     this.target = player;
     this.distance = 12;
     this.heightOffset = 2;
     this.positionSmoothness = 0.15;
+    this.updateTargetMeshVisibility();
+  }
+
+  /**
+   * Set camera to FPS mode following a player
+   */
+  setFPSMode(player) {
+    this.mode = 'fps';
+    this.target = player;
+    this.updateTargetMeshVisibility();
+  }
+
+  /**
+   * Toggle between FPS and TPS modes
+   */
+  toggleMode() {
+    if (this.mode === 'fps') {
+      this.mode = 'tps';
+    } else {
+      this.mode = 'fps';
+    }
+
+    // Save preference to localStorage
+    this.saveMode();
+
+    // Hide/show local player mesh based on camera mode
+    this.updateTargetMeshVisibility();
+
+    return this.mode;
+  }
+
+  /**
+   * Update target mesh visibility based on camera mode
+   * In FPS mode, hide the local player's mesh to avoid seeing own body
+   */
+  updateTargetMeshVisibility() {
+    if (this.target && this.target.mesh) {
+      // In FPS mode, hide the player mesh (locally only)
+      // In TPS mode, show the player mesh
+      this.target.mesh.visible = this.mode !== 'fps';
+    }
+  }
+
+  /**
+   * Get current camera mode
+   */
+  getMode() {
+    return this.mode;
+  }
+
+  /**
+   * Load saved camera mode from localStorage
+   */
+  loadSavedMode() {
+    try {
+      const savedMode = localStorage.getItem(CAMERA_MODE_STORAGE_KEY);
+      if (savedMode === 'fps' || savedMode === 'tps') {
+        return savedMode;
+      }
+    } catch (e) {
+      // localStorage might not be available
+      console.warn('Could not load camera mode from localStorage:', e);
+    }
+    return 'fps'; // Default to first-person
+  }
+
+  /**
+   * Save camera mode to localStorage
+   */
+  saveMode() {
+    try {
+      localStorage.setItem(CAMERA_MODE_STORAGE_KEY, this.mode);
+    } catch (e) {
+      console.warn('Could not save camera mode to localStorage:', e);
+    }
+  }
+
+  /**
+   * Apply saved camera mode and set target player
+   * Use this instead of setTPSMode/setFPSMode to respect user preference
+   */
+  applySavedMode(player) {
+    this.target = player;
+    // Mode is already loaded from localStorage in constructor
+    // Just apply the TPS-specific settings if needed
+    if (this.mode === 'tps') {
+      this.distance = 12;
+      this.heightOffset = 2;
+      this.positionSmoothness = 0.15;
+    }
+    this.updateTargetMeshVisibility();
   }
 
   /**
