@@ -43,6 +43,11 @@ export const DEFLECTION = {
   RANGE: 6,
   CONE_ANGLE: Math.PI / 5, // 36 degrees cone
   COOLDOWN: 500, // ms
+
+  // Drag mechanic - control missile direction after deflect
+  DRAG_DURATION: 100,      // ms - window to influence direction
+  DRAG_STRENGTH: 5,        // How much mouse movement affects direction
+  DRAG_MAX_FORCE: 5,       // Max force per frame (limits fast mouse movements)
 };
 
 export const ARENA = {

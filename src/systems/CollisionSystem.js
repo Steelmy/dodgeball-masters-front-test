@@ -66,6 +66,11 @@ export class CollisionSystem {
     // Switch missile team to deflector's team
     this.missile.setTeam(deflector.team);
 
+    // Start drag mode for player (not bot) - allows controlling direction
+    if (deflector === this.player) {
+      this.missile.startDrag(deflector);
+    }
+
     // Update target indicators
     deflector.setTargeted(false);
     newTarget.setTargeted(true);
@@ -89,6 +94,9 @@ export class CollisionSystem {
    */
   checkMissileCollision() {
     if (!this.missile.target || !this.missile.target.isAlive) return;
+
+    // Skip collision during grace period after deflect
+    if (this.missile.isInGracePeriod()) return;
 
     const missilePos = this.missile.getPosition();
     const missilePrevPos = this.missile.previousPosition || missilePos;

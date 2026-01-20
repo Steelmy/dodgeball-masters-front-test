@@ -45,6 +45,9 @@ export class Player extends Entity {
     this.isDeflecting = false;
     this.deflectActiveTime = 0;
 
+    // Missile reference for drag mechanic
+    this.missile = null;
+
     // Visual elements
     this.deflectZoneMesh = null;
 
@@ -184,7 +187,17 @@ export class Player extends Entity {
     // Show deflect zone when action key is held (right click)
     this.deflectZoneMesh.visible = isDeflectPressed;
 
-
+    // Handle missile drag mechanic
+    // During drag window, mouse movement influences missile direction (no need to hold right-click)
+    if (this.missile && this.missile.canBeDraggedBy(this)) {
+      const rawDelta = this.inputManager.getRawMouseDelta();
+      if (rawDelta.x !== 0 || rawDelta.y !== 0) {
+        const camera = this.cameraController ? this.cameraController.camera : null;
+        if (camera) {
+          this.missile.applyDrag(rawDelta.x, rawDelta.y, camera);
+        }
+      }
+    }
 
     // Update mesh position
     if (this.mesh) {
@@ -262,6 +275,13 @@ export class Player extends Entity {
    */
   setCameraController(cameraController) {
     this.cameraController = cameraController;
+  }
+
+  /**
+   * Set missile reference for drag mechanic
+   */
+  setMissile(missile) {
+    this.missile = missile;
   }
 
   handleJump(deltaTime) {

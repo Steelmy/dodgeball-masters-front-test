@@ -86,6 +86,9 @@ export class Game {
     this.scene.add(this.missile.getMesh());
     this.scene.add(this.missile.getTrail());
 
+    // Give player missile reference for drag mechanic
+    this.player.setMissile(this.missile);
+
     // Set initial positions
     const spawnPositions = this.arena.getSpawnPositions();
     this.player.setPosition(spawnPositions.player.position.x, 0, spawnPositions.player.position.z);

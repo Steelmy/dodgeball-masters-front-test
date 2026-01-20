@@ -172,6 +172,17 @@ export class InputManager extends EventEmitter {
   }
 
   /**
+   * Get raw mouse movement delta (for drag mechanic)
+   * Does NOT reset delta - call getMouseDelta() after to consume
+   */
+  getRawMouseDelta() {
+    return {
+      x: this.mouse.deltaX,
+      y: this.mouse.deltaY,
+    };
+  }
+
+  /**
    * Request pointer lock on an element
    */
   requestPointerLock(element) {

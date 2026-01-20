@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Entity } from './Entity.js';
-import { MISSILE, COLORS } from '../utils/Constants.js';
+import { MISSILE, COLORS, DEFLECTION } from '../utils/Constants.js';
 import { MathUtils } from '../utils/MathUtils.js';
 
 /**
@@ -29,6 +29,15 @@ export class Missile extends Entity {
     this.direction = new THREE.Vector3(0, 0, 1); // For visual orientation
     this.teamId = null;
     this.previousPosition = new THREE.Vector3();
+
+    // Drag state (player can control direction briefly after deflect)
+    this.isDragging = false;
+    this.dragTimer = 0;
+    this.dragOwner = null; // The player who can drag
+    this.baseDirection = new THREE.Vector3(); // Direction at start of drag
+
+    // Grace period after deflect (prevents immediate collision with new target)
+    this.deflectGraceTimer = 0;
 
     // Visual
     this.trailParticles = [];
@@ -104,6 +113,19 @@ export class Missile extends Entity {
     // Store previous position for collision detection
     this.previousPosition.copy(this.position);
 
+    // Update drag timer
+    if (this.isDragging) {
+      this.dragTimer -= deltaTime * 1000;
+      if (this.dragTimer <= 0) {
+        this.endDrag();
+      }
+    }
+
+    // Update deflect grace timer
+    if (this.deflectGraceTimer > 0) {
+      this.deflectGraceTimer -= deltaTime * 1000;
+    }
+
     // Update target position
     if (this.target.getPosition) {
       this.targetPosition.copy(this.target.getPosition());
@@ -115,11 +137,13 @@ export class Missile extends Entity {
     const distanceToTarget = toTarget.length();
     toTarget.normalize();
 
+    // Target velocity always points toward target
     const targetVelocity = toTarget.clone().multiplyScalar(this.speed);
 
     const tickRate = 66;
     const frameTurnRate = 1 - Math.pow(1 - this.turnRate, deltaTime * tickRate);
 
+    // Lerp velocity toward target (drag impulses will be gradually corrected)
     this.velocity.lerp(targetVelocity, frameTurnRate);
 
     // Update direction for visual orientation
@@ -199,6 +223,12 @@ export class Missile extends Entity {
     // Reverse velocity direction (the inertia will carry it back then redirect)
     this.velocity.negate();
 
+    // Update direction to match new velocity (important for drag)
+    this.direction.copy(this.velocity).normalize();
+
+    // Start grace period (prevents immediate collision with new target)
+    this.deflectGraceTimer = 150; // 150ms grace period
+
     // Emit event
     this.emit('deflect', {
       deflectionCount: this.deflectionCount,
@@ -206,6 +236,79 @@ export class Missile extends Entity {
       damage: this.damage,
       newTarget,
     });
+  }
+
+  /**
+   * Start drag mode - player can influence direction
+   */
+  startDrag(owner) {
+    this.isDragging = true;
+    this.dragTimer = DEFLECTION.DRAG_DURATION;
+    this.dragOwner = owner;
+    // Store the current direction as base for angle limit
+    this.baseDirection.copy(this.direction);
+  }
+
+  /**
+   * Apply mouse movement as impulse force to missile velocity
+   * @param {number} deltaX - Mouse X movement
+   * @param {number} deltaY - Mouse Y movement
+   * @param {THREE.Camera} camera - Camera for orientation reference
+   */
+  applyDrag(deltaX, deltaY, camera) {
+    if (!this.isDragging) return;
+
+    // Get camera right and up vectors for mouse-relative force
+    const cameraRight = new THREE.Vector3();
+    const cameraUp = new THREE.Vector3();
+    cameraRight.setFromMatrixColumn(camera.matrixWorld, 0);
+    cameraUp.setFromMatrixColumn(camera.matrixWorld, 1);
+
+    // Calculate force based on mouse movement
+    const force = new THREE.Vector3();
+    force.addScaledVector(cameraRight, deltaX * DEFLECTION.DRAG_STRENGTH);
+    force.addScaledVector(cameraUp, -deltaY * DEFLECTION.DRAG_STRENGTH);
+
+    // Limit force magnitude to prevent extreme impulses
+    const maxForce = DEFLECTION.DRAG_MAX_FORCE || this.speed * 0.5;
+    if (force.length() > maxForce) {
+      force.normalize().multiplyScalar(maxForce);
+    }
+
+    // Apply force as impulse to velocity
+    this.velocity.add(force);
+
+    // Clamp velocity magnitude to prevent instability
+    const maxVelocity = this.speed * 1.5;
+    if (this.velocity.length() > maxVelocity) {
+      this.velocity.normalize().multiplyScalar(maxVelocity);
+    }
+
+    // Update direction to match new velocity
+    this.direction.copy(this.velocity).normalize();
+  }
+
+  /**
+   * End drag mode
+   */
+  endDrag() {
+    this.isDragging = false;
+    this.dragTimer = 0;
+    this.dragOwner = null;
+  }
+
+  /**
+   * Check if entity can drag the missile
+   */
+  canBeDraggedBy(entity) {
+    return this.isDragging && this.dragOwner === entity;
+  }
+
+  /**
+   * Check if missile is in grace period (can't hit target)
+   */
+  isInGracePeriod() {
+    return this.deflectGraceTimer > 0;
   }
 
   /**
@@ -232,6 +335,12 @@ export class Missile extends Entity {
     this.velocity.set(0, 0, 1);
     this.direction.set(0, 0, 1);
     this.trailPositions = [];
+
+    // Reset drag state
+    this.isDragging = false;
+    this.dragTimer = 0;
+    this.dragOwner = null;
+    this.deflectGraceTimer = 0;
 
     // Reset to spawn position
     this.setPosition(0, MISSILE.SPAWN_HEIGHT, 0);
