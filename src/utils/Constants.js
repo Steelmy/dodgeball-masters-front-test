@@ -42,7 +42,7 @@ export const MISSILE = {
 export const DEFLECTION = {
   RANGE: 8,
   CONE_ANGLE: Math.PI / 5, // 36 degrees cone
-  COOLDOWN: 500, // ms
+  COOLDOWN: 750, // ms
 
   // Drag mechanic - control missile direction after deflect
   DRAG_DURATION: 100,      // ms - window to influence direction
