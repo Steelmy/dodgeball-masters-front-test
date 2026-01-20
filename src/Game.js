@@ -203,6 +203,11 @@ export class Game {
       this.cameraController.setRotation(spawnPositions.player.rotation, Math.PI / 12);
     });
 
+    // Play pulse sound when player activates deflection
+    globalEvents.on(EVENTS.PLAYER_DEFLECT, () => {
+      this.audioManager.play('pulse');
+    });
+
   }
 
   startGame() {

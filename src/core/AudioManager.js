@@ -35,8 +35,11 @@ export class AudioManager {
    * This avoids the need for external audio files
    */
   generateSounds() {
-    // Deflect sound - short sharp "whoosh"
+    // Deflect sound - successful missile return
     this.sounds.set('deflect', () => this.playDeflectSound());
+
+    // Pulse sound - air compression when player activates deflect (right-click)
+    this.sounds.set('pulse', () => this.playPulseSound());
 
     // Hit sound - impact explosion
     this.sounds.set('hit', () => this.playHitSound());
@@ -106,9 +109,82 @@ export class AudioManager {
   }
 
   playDeflectSound() {
-    this.createOscillator('sine', 800, 0.1, 0.2);
-    this.createOscillator('sine', 1200, 0.05, 0.15);
-    this.createNoise(0.05, 0.1);
+    if (!this.audioContext || !this.enabled) return;
+
+    const currentTime = this.audioContext.currentTime;
+
+    // Sharp "Ping/Impact" sound for the ball return
+    const pingOsc = this.audioContext.createOscillator();
+    const pingGain = this.audioContext.createGain();
+    pingOsc.type = 'triangle';
+    pingOsc.frequency.setValueAtTime(1200, currentTime);
+    pingOsc.frequency.exponentialRampToValueAtTime(400, currentTime + 0.1);
+    pingGain.gain.setValueAtTime(0.4, currentTime);
+    pingGain.gain.exponentialRampToValueAtTime(0.01, currentTime + 0.15);
+
+    pingOsc.connect(pingGain);
+    pingGain.connect(this.masterGain);
+    pingOsc.start(currentTime);
+    pingOsc.stop(currentTime + 0.15);
+
+    // Subtle noise for the texture of the hit
+    this.createNoise(0.05, 0.15);
+  }
+
+  playPulseSound() {
+    if (!this.audioContext || !this.enabled) return;
+
+    const currentTime = this.audioContext.currentTime;
+
+    // Low frequency "thump" for the air pulse activation
+    const bassOsc = this.audioContext.createOscillator();
+    const bassGain = this.audioContext.createGain();
+    bassOsc.type = 'sine';
+    bassOsc.frequency.setValueAtTime(150, currentTime);
+    bassOsc.frequency.exponentialRampToValueAtTime(40, currentTime + 0.2);
+    bassGain.gain.setValueAtTime(0.6, currentTime);
+    bassGain.gain.exponentialRampToValueAtTime(0.01, currentTime + 0.25);
+    bassOsc.connect(bassGain);
+    bassGain.connect(this.masterGain);
+    bassOsc.start(currentTime);
+    bassOsc.stop(currentTime + 0.25);
+
+    // Mid "whoosh" sweep for air compression
+    const whooshOsc = this.audioContext.createOscillator();
+    const whooshGain = this.audioContext.createGain();
+    whooshOsc.type = 'sawtooth';
+    whooshOsc.frequency.setValueAtTime(400, currentTime);
+    whooshOsc.frequency.exponentialRampToValueAtTime(100, currentTime + 0.15);
+    whooshGain.gain.setValueAtTime(0.2, currentTime);
+    whooshGain.gain.exponentialRampToValueAtTime(0.01, currentTime + 0.15);
+    whooshOsc.connect(whooshGain);
+    whooshGain.connect(this.masterGain);
+    whooshOsc.start(currentTime);
+    whooshOsc.stop(currentTime + 0.15);
+
+    // Filtered noise for air texture
+    const noiseBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.2, this.audioContext.sampleRate);
+    const noiseData = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < noiseData.length; i++) {
+      noiseData[i] = Math.random() * 2 - 1;
+    }
+
+    const noiseSource = this.audioContext.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const filter = this.audioContext.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2500, currentTime);
+    filter.frequency.exponentialRampToValueAtTime(300, currentTime + 0.2);
+
+    const noiseGain = this.audioContext.createGain();
+    noiseGain.gain.setValueAtTime(0.3, currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, currentTime + 0.2);
+
+    noiseSource.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+    noiseSource.start(currentTime);
   }
 
   playHitSound() {

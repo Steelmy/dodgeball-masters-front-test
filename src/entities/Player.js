@@ -181,6 +181,9 @@ export class Player extends Entity {
       this.isDeflecting = true;
       this.canDeflect = false;
       this.deflectCooldown = DEFLECTION.COOLDOWN;
+
+      // Emit pulse event for sound effect
+      globalEvents.emit(EVENTS.PLAYER_DEFLECT, { player: this });
     }
     this.wasDeflectPressed = isDeflectPressed;
 
@@ -350,7 +353,7 @@ export class Player extends Entity {
 
     this.health -= amount;
     this.emit('damage', { amount, health: this.health });
-    
+
     // Emit global event for UI
     globalEvents.emit(EVENTS.PLAYER_DAMAGE, { amount, health: this.health });
 

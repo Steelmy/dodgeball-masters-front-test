@@ -76,8 +76,14 @@ export class CollisionSystem {
     newTarget.setTargeted(true);
 
     // Play sound
-    if (this.audioManager) {
+    if (this.audioContext || this.audioManager) {
       this.audioManager.play('deflect');
+
+      // If deflector is not the player (e.g. Bot), also play the pulse sound
+      // (Player already plays it on right-click input)
+      if (deflector !== this.player) {
+        this.audioManager.play('pulse');
+      }
     }
 
     // Emit event
@@ -100,7 +106,7 @@ export class CollisionSystem {
 
     const missilePos = this.missile.getPosition();
     const missilePrevPos = this.missile.previousPosition || missilePos;
-    
+
     // Get target position and adjust to center of mass (chest height)
     // Default to base position if height not available, but Player/Bot use PLAYER.HEIGHT
     const targetPos = this.missile.target.getPosition();
