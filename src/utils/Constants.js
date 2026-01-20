@@ -29,8 +29,6 @@ export const MISSILE = {
   MAX_SPEED: 0,
 
   TURN_RATE: 0.1,
-  TURN_RATE_INCREMENT: 0,
-  MAX_TURN_RATE: 0.1,
 
   BASE_DAMAGE: 50,
   DAMAGE_INCREMENT: 50,
@@ -41,13 +39,13 @@ export const MISSILE = {
 
 export const DEFLECTION = {
   RANGE: 8,
-  CONE_ANGLE: Math.PI / 5, // 36 degrees cone
+  CONE_ANGLE: Math.PI / 4, // 45 degrees cone
   COOLDOWN: 750, // ms
 
   // Drag mechanic - control missile direction after deflect
-  DRAG_DURATION: 100,      // ms - window to influence direction
-  DRAG_STRENGTH: 5,        // How much mouse movement affects direction
-  DRAG_MAX_FORCE: 5,       // Max force per frame (limits fast mouse movements)
+  DRAG_DURATION: 50,   // ms - window to influence direction
+  DRAG_STRENGTH: 2.5,  // How much mouse movement affects direction
+  DRAG_MAX_FORCE: 6,   // Max force per frame (limits fast mouse movements)
 };
 
 export const ARENA = {
