@@ -52,45 +52,8 @@ export class Arena {
   }
 
   createWalls() {
-    // Transparent curved wall around the arena
-    const wallGeometry = new THREE.CylinderGeometry(
-      this.radius,
-      this.radius,
-      ARENA.WALL_HEIGHT,
-      64,
-      1,
-      true
-    );
-    const wallMaterial = new THREE.MeshStandardMaterial({
-      color: COLORS.ARENA_WALL,
-      transparent: true,
-      opacity: 0.3,
-      side: THREE.DoubleSide,
-      roughness: 0.1,
-      metalness: 0.5,
-    });
-
-    this.walls = new THREE.Mesh(wallGeometry, wallMaterial);
-    this.walls.position.y = ARENA.WALL_HEIGHT / 2;
-    this.group.add(this.walls);
-
-    // Wall edge ring (top)
-    const edgeGeometry = new THREE.TorusGeometry(this.radius, 0.1, 8, 64);
-    const edgeMaterial = new THREE.MeshStandardMaterial({
-      color: 0x3498db,
-      metalness: 0.8,
-      roughness: 0.2,
-    });
-    const topEdge = new THREE.Mesh(edgeGeometry, edgeMaterial);
-    topEdge.rotation.x = Math.PI / 2;
-    topEdge.position.y = ARENA.WALL_HEIGHT;
-    this.group.add(topEdge);
-
-    // Wall edge ring (bottom)
-    const bottomEdge = new THREE.Mesh(edgeGeometry, edgeMaterial);
-    bottomEdge.rotation.x = Math.PI / 2;
-    bottomEdge.position.y = 0;
-    this.group.add(bottomEdge);
+    // Invisible walls - collision handled by constrainToBounds()
+    // No visible walls, just the floor boundary
   }
 
   createWater() {
