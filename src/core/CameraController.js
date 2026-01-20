@@ -236,6 +236,10 @@ export class CameraController {
   toggleMode() {
     if (this.mode === 'fps') {
       this.mode = 'tps';
+      // Reset TPS specific settings when switching to it
+      this.distance = 12;
+      this.heightOffset = 2;
+      this.positionSmoothness = 0.15;
     } else {
       this.mode = 'fps';
     }
@@ -301,13 +305,19 @@ export class CameraController {
    */
   applySavedMode(player) {
     this.target = player;
-    // Mode is already loaded from localStorage in constructor
-    // Just apply the TPS-specific settings if needed
+
+    // Always reset TPS settings to defaults when starting a game/round
+    // to avoid carrying over the 'Overview' mode distance (35)
     if (this.mode === 'tps') {
       this.distance = 12;
       this.heightOffset = 2;
       this.positionSmoothness = 0.15;
+    } else {
+      // Even if in FPS, we set a reasonable distance in case they switch
+      this.distance = 12;
+      this.heightOffset = 2;
     }
+
     this.updateTargetMeshVisibility();
   }
 
