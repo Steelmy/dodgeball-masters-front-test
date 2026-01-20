@@ -12,7 +12,7 @@ export const GAME = {
 export const PLAYER = {
   MAX_HEALTH: 100,
   MOVE_SPEED: 10,
-  RADIUS: 0.5,
+  RADIUS: 0.4,
   HEIGHT: 1.8,
   JUMP_FORCE: 12,
   GRAVITY: 30,
@@ -24,14 +24,19 @@ export const BOT = {
 };
 
 export const MISSILE = {
-  BASE_SPEED: 6,
-  SPEED_MULTIPLIER: 1.3,  // 30% increase per deflection
-  BASE_DAMAGE: 70,
+  BASE_SPEED: 5,
+  SPEED_INCREMENT: 5,
+  MAX_SPEED: 0,
+
+  TURN_RATE: 0.12,
+  TURN_RATE_INCREMENT: 0,
+  MAX_TURN_RATE: 0.12,
+
+  BASE_DAMAGE: 50,
+  DAMAGE_INCREMENT: 50,
+
   RADIUS: 0.3,
   SPAWN_HEIGHT: 5,
-  TRACKING_STRENGTH: 2.5,   // How aggressively missile tracks target
-  MIN_TRACKING_STRENGTH: 1,
-  MAX_TRACKING_STRENGTH: 5,
 };
 
 export const DEFLECTION = {

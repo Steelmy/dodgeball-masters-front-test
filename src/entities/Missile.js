@@ -14,12 +14,11 @@ export class Missile extends Entity {
 
     // Movement
     this.speed = MISSILE.BASE_SPEED;
-    this.baseSpeed = MISSILE.BASE_SPEED;
-    this.trackingStrength = MISSILE.TRACKING_STRENGTH;
+    this.turnRate = MISSILE.TURN_RATE;
+    this.velocity = new THREE.Vector3(0, 0, 1);
 
     // Damage
     this.damage = MISSILE.BASE_DAMAGE;
-    this.baseDamage = MISSILE.BASE_DAMAGE;
 
     // Target
     this.target = null;
@@ -27,7 +26,7 @@ export class Missile extends Entity {
 
     // State
     this.deflectionCount = 0;
-    this.direction = new THREE.Vector3(0, 0, 1);
+    this.direction = new THREE.Vector3(0, 0, 1); // For visual orientation
     this.teamId = null;
     this.previousPosition = new THREE.Vector3();
 
@@ -112,19 +111,22 @@ export class Missile extends Entity {
       this.targetPosition.y = this.target.position.y + 0.9;
     }
 
-    // Calculate direction to target
     const toTarget = new THREE.Vector3().subVectors(this.targetPosition, this.position);
     const distanceToTarget = toTarget.length();
     toTarget.normalize();
 
-    // Smooth tracking - missile curves toward target
-    // Higher tracking strength = more aggressive tracking
-    const trackingFactor = Math.min(1, this.trackingStrength * deltaTime);
-    this.direction.lerp(toTarget, trackingFactor).normalize();
+    const targetVelocity = toTarget.clone().multiplyScalar(this.speed);
 
-    // Move missile
-    const movement = this.direction.clone().multiplyScalar(this.speed * deltaTime);
-    this.position.add(movement);
+    const tickRate = 66;
+    const frameTurnRate = 1 - Math.pow(1 - this.turnRate, deltaTime * tickRate);
+
+    this.velocity.lerp(targetVelocity, frameTurnRate);
+
+    // Update direction for visual orientation
+    this.direction.copy(this.velocity).normalize();
+
+    // Move missile using velocity
+    this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
 
     // Rotate mesh to face direction of travel
     if (this.mesh) {
@@ -176,24 +178,26 @@ export class Missile extends Entity {
   deflect(newTarget) {
     this.deflectionCount++;
 
-    // Increase speed by 30%
-    this.speed *= MISSILE.SPEED_MULTIPLIER;
+    // Additive increments based on deflection count
+    this.speed = MISSILE.BASE_SPEED + (MISSILE.SPEED_INCREMENT * this.deflectionCount);
+    if (MISSILE.MAX_SPEED > 0) {
+      this.speed = Math.min(this.speed, MISSILE.MAX_SPEED);
+    }
 
-    // Increase tracking strength (more aggressive after deflections)
-    this.trackingStrength = MathUtils.clamp(
-      this.trackingStrength * 1.2,
-      MISSILE.MIN_TRACKING_STRENGTH,
-      MISSILE.MAX_TRACKING_STRENGTH
+    // Turn rate: base + (increment * deflections)
+    this.turnRate = Math.min(
+      MISSILE.TURN_RATE + (MISSILE.TURN_RATE_INCREMENT * this.deflectionCount),
+      MISSILE.MAX_TURN_RATE
     );
 
-    // Calculate new damage
-    this.damage = this.baseDamage * (this.speed / this.baseSpeed);
+    // Damage: base + (increment * deflections)
+    this.damage = MISSILE.BASE_DAMAGE + (MISSILE.DAMAGE_INCREMENT * this.deflectionCount);
 
     // Set new target
     this.setTarget(newTarget);
 
-    // Reverse direction briefly (visual feedback)
-    this.direction.negate();
+    // Reverse velocity direction (the inertia will carry it back then redirect)
+    this.velocity.negate();
 
     // Emit event
     this.emit('deflect', {
@@ -221,10 +225,11 @@ export class Missile extends Entity {
    */
   reset() {
     this.speed = MISSILE.BASE_SPEED;
+    this.turnRate = MISSILE.TURN_RATE;
     this.damage = MISSILE.BASE_DAMAGE;
-    this.trackingStrength = MISSILE.TRACKING_STRENGTH;
     this.deflectionCount = 0;
     this.target = null;
+    this.velocity.set(0, 0, 1);
     this.direction.set(0, 0, 1);
     this.trailPositions = [];
 
@@ -279,9 +284,11 @@ export class Missile extends Entity {
     this.setTeam(teamId);
     this.isActive = true;
 
-    // Initial direction toward target
+    // Initial velocity toward target
     if (initialTarget) {
-      this.direction = MathUtils.directionTo(this.position, initialTarget.getPosition());
+      const dir = MathUtils.directionTo(this.position, initialTarget.getPosition());
+      this.velocity.copy(dir).multiplyScalar(this.speed);
+      this.direction.copy(dir);
     }
   }
 
