@@ -99,6 +99,9 @@ export class GameStateManager {
     this.stateTimer += deltaTime;
 
     const newCountdown = Math.ceil(3 - this.stateTimer);
+    
+    // Debug log
+    // console.log(`Countdown: ${this.stateTimer.toFixed(2)} -> ${newCountdown}`);
 
     if (newCountdown !== this.countdownValue && newCountdown > 0) {
       this.countdownValue = newCountdown;
