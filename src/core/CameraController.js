@@ -34,8 +34,9 @@ export class CameraController {
     this.maxPitch = Math.PI * 0.45;   // Looking down (~81°)
 
     // Camera distance and offset from target (TPS mode)
-    this.distance = 12;
-    this.heightOffset = 2; // Height above target to look at
+    this.distance = 4;
+    this.heightOffset = 0; // Height above target to look at
+    this.sideOffset = 0; // Horizontal offset (Right +, Left -)
     this.targetOffset = new THREE.Vector3(0, 1.5, 0); // Offset on target
 
     // FPS settings
@@ -200,18 +201,35 @@ export class CameraController {
     const horizontalDistance = this.distance * Math.cos(this.pitch);
     const verticalDistance = this.distance * Math.sin(this.pitch);
 
-    const desiredPosition = new THREE.Vector3(
-      targetPos.x + horizontalDistance * Math.sin(this.yaw),
-      targetPos.y + verticalDistance + this.heightOffset,
-      targetPos.z + horizontalDistance * Math.cos(this.yaw)
-    );
+    // Calculate base position from rotation
+    let camX = targetPos.x + horizontalDistance * Math.sin(this.yaw);
+    let camY = targetPos.y + verticalDistance + this.heightOffset;
+    let camZ = targetPos.z + horizontalDistance * Math.cos(this.yaw);
+
+    // Apply side offset (Right vector: cos(yaw), 0, -sin(yaw))
+    let offsetX = 0;
+    let offsetZ = 0;
+
+    if (this.sideOffset !== 0) {
+      offsetX = this.sideOffset * Math.cos(this.yaw);
+      offsetZ = this.sideOffset * -Math.sin(this.yaw);
+      
+      camX += offsetX;
+      camZ += offsetZ;
+    }
+
+    const desiredPosition = new THREE.Vector3(camX, camY, camZ);
 
     // Smooth camera movement
     this.currentPosition.lerp(desiredPosition, this.positionSmoothness);
     this.camera.position.copy(this.currentPosition);
 
-    // Look at target
-    this.camera.lookAt(targetPos);
+    // Look at target (offsetted to maintain parallel view)
+    const lookAtTarget = targetPos.clone();
+    lookAtTarget.x += offsetX;
+    lookAtTarget.y += this.heightOffset; // Apply height offset to target to maintain pitch
+    lookAtTarget.z += offsetZ;
+    this.camera.lookAt(lookAtTarget);
   }
 
   /**
@@ -257,8 +275,6 @@ export class CameraController {
   setTPSMode(player) {
     this.mode = 'tps';
     this.target = player;
-    this.distance = 12;
-    this.heightOffset = 2;
     this.positionSmoothness = 0.15;
     this.updateTargetMeshVisibility();
   }
@@ -278,9 +294,6 @@ export class CameraController {
   toggleMode() {
     if (this.mode === 'fps') {
       this.mode = 'tps';
-      // Reset TPS specific settings when switching to it
-      this.distance = 12;
-      this.heightOffset = 2;
       this.positionSmoothness = 0.15;
     } else {
       this.mode = 'fps';
@@ -353,18 +366,6 @@ export class CameraController {
   applySavedMode(player) {
     this.target = player;
 
-    // Always reset TPS settings to defaults when starting a game/round
-    // to avoid carrying over the 'Overview' mode distance (35)
-    if (this.mode === 'tps') {
-      this.distance = 12;
-      this.heightOffset = 2;
-      this.positionSmoothness = 0.15;
-    } else {
-      // Even if in FPS, we set a reasonable distance in case they switch
-      this.distance = 12;
-      this.heightOffset = 2;
-    }
-
     this.updateTargetMeshVisibility();
   }
 
@@ -403,8 +404,33 @@ export class CameraController {
     this.yaw = yaw;
   }
 
+  setFOV(fov) {
+    this.camera.fov = fov;
+    this.camera.updateProjectionMatrix();
+  }
+
+  setDistance(distance) {
+    this.distance = distance;
+  }
+
+  setOffsets(height, side) {
+    if (height !== undefined) this.heightOffset = height;
+    if (side !== undefined) this.sideOffset = side;
+  }
+
   getCamera() {
     return this.camera;
+  }
+
+  resetDefaults() {
+    this.mode = 'tps';
+    this.setFOV(60);
+    this.distance = 4;
+    this.heightOffset = 0;
+    this.sideOffset = 0;
+    this.positionSmoothness = 0.15;
+    this.saveMode();
+    // Note: Caller needs to handle target mesh visibility update if needed
   }
 
   dispose() {

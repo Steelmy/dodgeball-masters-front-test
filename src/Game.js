@@ -126,6 +126,102 @@ export class Game {
     this.uiManager.bindQuitButton(() => this.quitToMenu());
     this.uiManager.bindPlayAgainButton(() => this.startGame());
     this.uiManager.bindMainMenuButton(() => this.quitToMenu());
+
+    // Bind Settings
+    this.uiManager.bindSettingsActions({
+      getValues: () => {
+        const cam = this.cameraController;
+        return {
+          camera: {
+            mode: cam.mode,
+            fov: cam.camera.fov,
+            distance: cam.distance,
+            heightOffset: cam.heightOffset,
+            sideOffset: cam.sideOffset
+          },
+          volume: this.audioManager.volume,
+          bindings: this.inputManager.bindings
+        };
+      },
+      onCameraChange: (changes) => {
+        if (changes.mode) {
+          if (changes.mode === 'fps') this.cameraController.setFPSMode(this.player);
+          else this.cameraController.setTPSMode(this.player);
+          this.cameraController.saveMode();
+        }
+        
+        if (changes.fov) this.cameraController.setFOV(changes.fov);
+        if (changes.distance) this.cameraController.setDistance(changes.distance);
+        
+        // Handle offsets
+        if (changes.heightOffset !== undefined || changes.sideOffset !== undefined) {
+          this.cameraController.setOffsets(changes.heightOffset, changes.sideOffset);
+        }
+
+        // Save camera settings
+        const settings = {
+          fov: this.cameraController.camera.fov,
+          distance: this.cameraController.distance,
+          heightOffset: this.cameraController.heightOffset,
+          sideOffset: this.cameraController.sideOffset
+        };
+        localStorage.setItem('dodgeball_camera_settings', JSON.stringify(settings));
+      },
+      onAudioChange: (volume) => {
+        this.audioManager.setVolume(volume);
+        localStorage.setItem('dodgeball_audio_volume', volume);
+      },
+      onControlChange: (action, key) => {
+        this.inputManager.setBinding(action, key);
+        localStorage.setItem('dodgeball_key_bindings', JSON.stringify(this.inputManager.bindings));
+      },
+      onResetCamera: () => {
+        this.cameraController.resetDefaults();
+        // Clear storage to rely on defaults or explicitly save defaults
+        localStorage.removeItem('dodgeball_camera_settings');
+        localStorage.removeItem('dodgeball_camera_mode');
+      },
+      onResetControls: () => {
+        this.inputManager.resetBindings();
+        localStorage.removeItem('dodgeball_key_bindings');
+      },
+      onResetAudio: () => {
+        this.audioManager.resetDefaults();
+        localStorage.removeItem('dodgeball_audio_volume');
+      }
+    });
+
+    this.loadSettings();
+  }
+
+  loadSettings() {
+    // Load Camera Settings
+    try {
+      const camSettings = JSON.parse(localStorage.getItem('dodgeball_camera_settings'));
+      if (camSettings) {
+        if (camSettings.fov) this.cameraController.setFOV(camSettings.fov);
+        if (camSettings.distance) this.cameraController.setDistance(camSettings.distance);
+        this.cameraController.setOffsets(camSettings.heightOffset, camSettings.sideOffset);
+      }
+    } catch (e) { console.warn('Failed to load camera settings', e); }
+
+    // Load Audio Settings
+    try {
+      const vol = localStorage.getItem('dodgeball_audio_volume');
+      if (vol !== null) {
+        this.audioManager.setVolume(parseFloat(vol));
+      }
+    } catch (e) { console.warn('Failed to load audio settings', e); }
+
+    // Load Controls
+    try {
+      const bindings = JSON.parse(localStorage.getItem('dodgeball_key_bindings'));
+      if (bindings) {
+        for (const [action, key] of Object.entries(bindings)) {
+          this.inputManager.setBinding(action, key);
+        }
+      }
+    } catch (e) { console.warn('Failed to load key bindings', e); }
   }
 
   setupEventListeners() {
@@ -217,6 +313,7 @@ export class Game {
 
     // Apply saved camera mode (respects user preference)
     this.cameraController.applySavedMode(this.player);
+    this.loadSettings();
 
     // Lock pointer for mouse look
     this.inputManager.requestPointerLock(this.canvas);

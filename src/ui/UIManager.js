@@ -13,6 +13,8 @@ export class UIManager {
     this.hud = null;
     this.mainMenu = null;
     this.pauseMenu = null;
+    this.settingsMenu = null;
+    this.confirmationModal = null;
     this.matchEndScreen = null;
     this.countdown = null;
     this.roundAnnouncement = null;
@@ -32,6 +34,8 @@ export class UIManager {
     this.createMainMenu();
     this.createHUD();
     this.createPauseMenu();
+    this.createSettingsMenu();
+    this.createConfirmationModal();
     this.createMatchEndScreen();
     this.createCountdown();
     this.createRoundAnnouncement();
@@ -159,11 +163,199 @@ export class UIManager {
         <h2 class="text-3xl font-black text-white mb-8 tracking-widest border-b border-white/10 pb-4">PAUSED</h2>
         <div class="flex flex-col gap-4">
           <button class="btn-primary cursor-pointer" id="btn-resume">RESUME</button>
+          <button class="btn-secondary cursor-pointer" id="btn-settings-open">SETTINGS</button>
           <button class="btn-secondary cursor-pointer" id="btn-quit">QUIT TO MENU</button>
         </div>
       </div>
     `;
     this.container.appendChild(this.pauseMenu);
+  }
+
+  createSettingsMenu() {
+    this.settingsMenu = document.createElement('div');
+    this.settingsMenu.className = 'absolute inset-0 flex items-center justify-center bg-slate-950/90 backdrop-blur pointer-events-auto hidden z-50';
+    this.settingsMenu.innerHTML = `
+      <div class="panel-glass p-8 w-full max-w-2xl max-h-[80vh] overflow-y-auto flex flex-col">
+        <h2 class="text-2xl font-black text-white mb-6 tracking-widest border-b border-white/10 pb-4 flex justify-between items-center">
+          SETTINGS
+          <button id="btn-settings-close" class="text-slate-400 hover:text-white transition-colors text-sm font-mono">[ ESC ]</button>
+        </h2>
+
+        <!-- Tabs -->
+        <div class="flex gap-2 mb-6 border-b border-white/5 pb-1">
+          <button class="px-4 py-2 text-sm font-bold uppercase tracking-wider text-cyan-400 border-b-2 border-cyan-400 transition-colors" data-tab="camera">Camera</button>
+          <button class="px-4 py-2 text-sm font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors" data-tab="controls">Controls</button>
+          <button class="px-4 py-2 text-sm font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors" data-tab="audio">Audio</button>
+        </div>
+
+        <!-- Camera Settings -->
+        <div id="settings-camera" class="settings-content space-y-6">
+          <div class="flex flex-col gap-2">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Camera Mode</label>
+            <div class="flex bg-slate-800/50 rounded p-1 border border-white/5 w-fit">
+              <button id="cam-mode-fps" class="px-4 py-1 text-xs font-bold rounded transition-colors bg-cyan-600 text-white">FPS</button>
+              <button id="cam-mode-tps" class="px-4 py-1 text-xs font-bold rounded transition-colors text-slate-400 hover:text-white">TPS</button>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between mb-1">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Field of View (FOV)</label>
+                <span id="val-fov" class="text-xs font-mono text-cyan-400">60</span>
+              </div>
+              <input type="range" id="input-fov" min="40" max="80" value="60" class="w-full accent-cyan-500 bg-slate-700 h-1 rounded-lg appearance-none cursor-pointer">
+            </div>
+
+            <div id="tps-settings" class="space-y-4 opacity-50 pointer-events-none transition-opacity">
+               <div>
+                <div class="flex justify-between mb-1">
+                  <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Distance</label>
+                  <span id="val-dist" class="text-xs font-mono text-cyan-400">4</span>
+                </div>
+                <input type="range" id="input-dist" min="1" max="10" value="4" step="0.1" class="w-full accent-cyan-500 bg-slate-700 h-1 rounded-lg appearance-none cursor-pointer">
+              </div>
+
+              <div>
+                <div class="flex justify-between mb-1">
+                  <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Height Offset</label>
+                  <span id="val-height" class="text-xs font-mono text-cyan-400">0.0</span>
+                </div>
+                <input type="range" id="input-height" min="0" max="2" value="0" step="0.1" class="w-full accent-cyan-500 bg-slate-700 h-1 rounded-lg appearance-none cursor-pointer">
+              </div>
+
+              <div>
+                <div class="flex justify-between mb-1">
+                  <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Side Offset</label>
+                  <span id="val-side" class="text-xs font-mono text-cyan-400">0.0</span>
+                </div>
+                <input type="range" id="input-side" min="-2" max="2" value="0" step="0.1" class="w-full accent-cyan-500 bg-slate-700 h-1 rounded-lg appearance-none cursor-pointer">
+              </div>
+            </div>
+          </div>
+          <div class="pt-4 border-t border-white/5">
+            <button id="btn-reset-camera" class="text-xs text-rose-400 hover:text-rose-300 transition-colors underline cursor-pointer">Reset Camera Defaults</button>
+          </div>
+        </div>
+
+        <!-- Controls Settings -->
+        <div id="settings-controls" class="settings-content hidden space-y-4">
+          <p class="text-xs text-slate-500 mb-4">Click a button to rebind. Press ESC to cancel.</p>
+          <div class="grid grid-cols-1 gap-3">
+             <div class="flex items-center justify-between bg-slate-800/30 p-2 rounded border border-white/5">
+                <span class="text-sm font-bold text-slate-300">Move Forward</span>
+                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-[60px] border border-white/10 hover:border-cyan-500 transition-colors" data-action="forward">KeyW</button>
+             </div>
+             <div class="flex items-center justify-between bg-slate-800/30 p-2 rounded border border-white/5">
+                <span class="text-sm font-bold text-slate-300">Move Backward</span>
+                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-[60px] border border-white/10 hover:border-cyan-500 transition-colors" data-action="backward">KeyS</button>
+             </div>
+             <div class="flex items-center justify-between bg-slate-800/30 p-2 rounded border border-white/5">
+                <span class="text-sm font-bold text-slate-300">Move Left</span>
+                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-[60px] border border-white/10 hover:border-cyan-500 transition-colors" data-action="left">KeyA</button>
+             </div>
+             <div class="flex items-center justify-between bg-slate-800/30 p-2 rounded border border-white/5">
+                <span class="text-sm font-bold text-slate-300">Move Right</span>
+                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-[60px] border border-white/10 hover:border-cyan-500 transition-colors" data-action="right">KeyD</button>
+             </div>
+             <div class="flex items-center justify-between bg-slate-800/30 p-2 rounded border border-white/5">
+                <span class="text-sm font-bold text-slate-300">Jump</span>
+                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-[60px] border border-white/10 hover:border-cyan-500 transition-colors" data-action="jump">Space</button>
+             </div>
+          </div>
+          <div class="pt-4 border-t border-white/5">
+            <button id="btn-reset-controls" class="text-xs text-rose-400 hover:text-rose-300 transition-colors underline cursor-pointer">Reset Control Defaults</button>
+          </div>
+        </div>
+
+        <!-- Audio Settings -->
+        <div id="settings-audio" class="settings-content hidden space-y-6">
+          <div>
+            <div class="flex justify-between mb-1">
+              <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Master Volume</label>
+              <span id="val-volume" class="text-xs font-mono text-cyan-400">15%</span>
+            </div>
+            <input type="range" id="input-volume" min="0" max="100" value="15" class="w-full accent-cyan-500 bg-slate-700 h-1 rounded-lg appearance-none cursor-pointer">
+          </div>
+          <div class="pt-4 border-t border-white/5">
+            <button id="btn-reset-audio" class="text-xs text-rose-400 hover:text-rose-300 transition-colors underline cursor-pointer">Reset Audio Defaults</button>
+          </div>
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-white/10 flex justify-end">
+          <button id="btn-settings-save" class="btn-primary">Back</button>
+        </div>
+      </div>
+    `;
+    this.container.appendChild(this.settingsMenu);
+
+    this.setupSettingsTabs();
+  }
+
+  createConfirmationModal() {
+    this.confirmationModal = document.createElement('div');
+    this.confirmationModal.className = 'absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-auto hidden z-[60]';
+    this.confirmationModal.innerHTML = `
+      <div class="panel-glass p-8 max-w-sm w-full text-center border-rose-500/30">
+        <h3 class="text-xl font-bold text-white mb-4">Confirm Reset</h3>
+        <p class="text-sm text-slate-300 mb-8" id="confirmation-message">Are you sure?</p>
+        <div class="flex justify-center gap-4">
+          <button class="btn-secondary min-w-[100px]" id="btn-confirm-cancel">Cancel</button>
+          <button class="btn-primary bg-rose-600 hover:bg-rose-500 border-rose-500 min-w-[100px]" id="btn-confirm-ok">Confirm</button>
+        </div>
+      </div>
+    `;
+    this.container.appendChild(this.confirmationModal);
+
+    // Bind basic close/cancel
+    document.getElementById('btn-confirm-cancel').addEventListener('click', () => {
+      this.confirmationModal.classList.add('hidden');
+      this.confirmationModal.classList.remove('flex');
+    });
+  }
+
+  showConfirmationModal(message, onConfirm) {
+    document.getElementById('confirmation-message').textContent = message;
+    
+    // Replace old confirm button to clear previous listeners
+    const oldBtn = document.getElementById('btn-confirm-ok');
+    const newBtn = oldBtn.cloneNode(true);
+    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+
+    newBtn.addEventListener('click', () => {
+      onConfirm();
+      this.confirmationModal.classList.add('hidden');
+      this.confirmationModal.classList.remove('flex');
+    });
+
+    this.confirmationModal.classList.remove('hidden');
+    this.confirmationModal.classList.add('flex');
+  }
+
+  setupSettingsTabs() {
+    const tabs = this.settingsMenu.querySelectorAll('[data-tab]');
+    const contents = this.settingsMenu.querySelectorAll('.settings-content');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Reset tabs
+        tabs.forEach(t => {
+          t.className = 'px-4 py-2 text-sm font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors';
+        });
+        // Activate current
+        tab.className = 'px-4 py-2 text-sm font-bold uppercase tracking-wider text-cyan-400 border-b-2 border-cyan-400 transition-colors';
+
+        // Show content
+        const target = tab.dataset.tab;
+        contents.forEach(content => {
+          if (content.id === `settings-${target}`) {
+            content.classList.remove('hidden');
+          } else {
+            content.classList.add('hidden');
+          }
+        });
+      });
+    });
   }
 
   createMatchEndScreen() {
@@ -395,8 +587,21 @@ export class UIManager {
     this.pauseMenu.classList.add('hidden');
   }
 
+  showSettingsMenu() {
+    this.settingsMenu.classList.remove('hidden');
+    this.settingsMenu.classList.add('flex');
+    this.pauseMenu.classList.add('hidden'); // Hide pause menu while settings is open
+  }
+
+  hideSettingsMenu() {
+    this.settingsMenu.classList.add('hidden');
+    this.settingsMenu.classList.remove('flex');
+    this.pauseMenu.classList.remove('hidden'); // Show pause menu again
+    this.pauseMenu.classList.add('flex');
+  }
+
   hideAll() {
-    [this.mainMenu, this.hud, this.pauseMenu, this.matchEndScreen, this.countdown, this.roundAnnouncement].forEach(el => {
+    [this.mainMenu, this.hud, this.pauseMenu, this.matchEndScreen, this.countdown, this.roundAnnouncement, this.settingsMenu, this.confirmationModal].forEach(el => {
       if (el) {
         el.classList.add('hidden');
         el.classList.remove('flex');
@@ -437,6 +642,177 @@ export class UIManager {
 
   bindMainMenuButton(callback) {
     document.getElementById('btn-main-menu').addEventListener('click', callback);
+  }
+
+  bindSettingsActions(callbacks) {
+    const { onCameraChange, onAudioChange, onControlChange, onResetCamera, onResetControls, onResetAudio, getValues } = callbacks;
+
+    // Open/Close
+    document.getElementById('btn-settings-open').addEventListener('click', () => {
+       // Refresh values when opening
+       const values = getValues();
+       this.updateSettingsUI(values);
+       this.showSettingsMenu();
+    });
+    
+    document.getElementById('btn-settings-close').addEventListener('click', () => this.hideSettingsMenu());
+    document.getElementById('btn-settings-save').addEventListener('click', () => this.hideSettingsMenu());
+
+    // Camera Mode
+    const btnFps = document.getElementById('cam-mode-fps');
+    const btnTps = document.getElementById('cam-mode-tps');
+    const tpsSettings = document.getElementById('tps-settings');
+
+    const updateModeUI = (mode) => {
+      if (mode === 'fps') {
+        btnFps.className = 'px-4 py-1 text-xs font-bold rounded transition-colors bg-cyan-600 text-white';
+        btnTps.className = 'px-4 py-1 text-xs font-bold rounded transition-colors text-slate-400 hover:text-white';
+        tpsSettings.classList.add('opacity-50', 'pointer-events-none');
+      } else {
+        btnFps.className = 'px-4 py-1 text-xs font-bold rounded transition-colors text-slate-400 hover:text-white';
+        btnTps.className = 'px-4 py-1 text-xs font-bold rounded transition-colors bg-cyan-600 text-white';
+        tpsSettings.classList.remove('opacity-50', 'pointer-events-none');
+      }
+    };
+
+    btnFps.addEventListener('click', () => {
+      updateModeUI('fps');
+      onCameraChange({ mode: 'fps' });
+    });
+
+    btnTps.addEventListener('click', () => {
+      updateModeUI('tps');
+      onCameraChange({ mode: 'tps' });
+    });
+
+    // Sliders
+    const bindSlider = (id, valId, key, transform = (v) => v) => {
+      const el = document.getElementById(id);
+      const label = document.getElementById(valId);
+      el.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        label.textContent = transform(val);
+        onCameraChange({ [key]: val });
+      });
+    };
+
+    bindSlider('input-fov', 'val-fov', 'fov');
+    bindSlider('input-dist', 'val-dist', 'distance');
+    bindSlider('input-height', 'val-height', 'heightOffset', (v) => v.toFixed(1));
+    bindSlider('input-side', 'val-side', 'sideOffset', (v) => v.toFixed(1));
+
+    // Audio
+    const volSlider = document.getElementById('input-volume');
+    const volLabel = document.getElementById('val-volume');
+    volSlider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      volLabel.textContent = `${Math.round(val)}%`;
+      onAudioChange(val / 100);
+    });
+
+    // Controls
+    const bindButtons = document.querySelectorAll('.key-bind-btn');
+    bindButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        const originalText = btn.textContent;
+        
+        btn.textContent = '...';
+        btn.classList.add('bg-cyan-600', 'text-white');
+
+        const handleKey = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          if (e.code === 'Escape') {
+            btn.textContent = originalText;
+          } else {
+            btn.textContent = e.code;
+            onControlChange(action, e.code);
+          }
+          
+          btn.classList.remove('bg-cyan-600', 'text-white');
+          window.removeEventListener('keydown', handleKey);
+        };
+
+                  window.addEventListener('keydown', handleKey, { once: true });
+              });
+            });
+        
+                // Reset Buttons
+                document.getElementById('btn-reset-camera').addEventListener('click', () => {
+                  this.showConfirmationModal('Reset camera settings to default?', () => {
+                    onResetCamera();
+                    this.updateSettingsUI(getValues());
+                  });
+                });
+            
+                document.getElementById('btn-reset-controls').addEventListener('click', () => {
+                  this.showConfirmationModal('Reset control bindings to default?', () => {
+                    onResetControls();
+                    this.updateSettingsUI(getValues());
+                  });
+                });
+            
+                document.getElementById('btn-reset-audio').addEventListener('click', () => {
+                  this.showConfirmationModal('Reset audio settings to default?', () => {
+                    onResetAudio();
+                    this.updateSettingsUI(getValues());
+                  });
+                });
+              }        
+          updateSettingsUI(values) {    if (!values) return;
+
+    // Camera
+    if (values.camera) {
+      const { mode, fov, distance, heightOffset, sideOffset } = values.camera;
+      
+      // Mode
+      const btnFps = document.getElementById('cam-mode-fps');
+      const btnTps = document.getElementById('cam-mode-tps');
+      const tpsSettings = document.getElementById('tps-settings');
+      
+      if (mode === 'fps') {
+        btnFps.className = 'px-4 py-1 text-xs font-bold rounded transition-colors bg-cyan-600 text-white';
+        btnTps.className = 'px-4 py-1 text-xs font-bold rounded transition-colors text-slate-400 hover:text-white';
+        tpsSettings.classList.add('opacity-50', 'pointer-events-none');
+      } else {
+        btnFps.className = 'px-4 py-1 text-xs font-bold rounded transition-colors text-slate-400 hover:text-white';
+        btnTps.className = 'px-4 py-1 text-xs font-bold rounded transition-colors bg-cyan-600 text-white';
+        tpsSettings.classList.remove('opacity-50', 'pointer-events-none');
+      }
+
+      // Sliders
+      document.getElementById('input-fov').value = fov;
+      document.getElementById('val-fov').textContent = fov;
+
+      document.getElementById('input-dist').value = distance;
+      document.getElementById('val-dist').textContent = distance;
+
+      document.getElementById('input-height').value = heightOffset;
+      document.getElementById('val-height').textContent = heightOffset.toFixed(1);
+
+      document.getElementById('input-side').value = sideOffset;
+      document.getElementById('val-side').textContent = sideOffset.toFixed(1);
+    }
+
+    // Audio
+    if (values.volume !== undefined) {
+      const vol = Math.round(values.volume * 100);
+      document.getElementById('input-volume').value = vol;
+      document.getElementById('val-volume').textContent = `${vol}%`;
+    }
+
+    // Controls
+    if (values.bindings) {
+      const btns = document.querySelectorAll('.key-bind-btn');
+      btns.forEach(btn => {
+        const action = btn.dataset.action;
+        if (values.bindings[action]) {
+          btn.textContent = values.bindings[action];
+        }
+      });
+    }
   }
 
   dispose() {

@@ -10,7 +10,7 @@ export class AudioManager {
     this.masterGain = null;
     this.sounds = new Map();
     this.enabled = true;
-    this.volume = 0.5;
+    this.volume = 0.15;
 
     this.init();
   }
@@ -276,6 +276,10 @@ export class AudioManager {
    */
   disable() {
     this.enabled = false;
+  }
+
+  resetDefaults() {
+    this.setVolume(0.15);
   }
 
   dispose() {

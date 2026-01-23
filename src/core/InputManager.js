@@ -24,6 +24,16 @@ export class InputManager extends EventEmitter {
     this.isPointerLocked = false;
     this.mouseSensitivity = 0.002;
 
+    // Default key bindings
+    this.bindings = {
+      forward: 'KeyW',
+      backward: 'KeyS',
+      left: 'KeyA',
+      right: 'KeyD',
+      jump: 'Space',
+      pause: 'Escape' // Added pause binding
+    };
+
     this.setupEventListeners();
   }
 
@@ -121,10 +131,10 @@ export class InputManager extends EventEmitter {
     let x = 0;
     let z = 0;
 
-    if (this.isKeyPressed('KeyW') || this.isKeyPressed('ArrowUp')) z -= 1;
-    if (this.isKeyPressed('KeyS') || this.isKeyPressed('ArrowDown')) z += 1;
-    if (this.isKeyPressed('KeyA') || this.isKeyPressed('ArrowLeft')) x -= 1;
-    if (this.isKeyPressed('KeyD') || this.isKeyPressed('ArrowRight')) x += 1;
+    if (this.isKeyPressed(this.bindings.forward) || this.isKeyPressed('ArrowUp')) z -= 1;
+    if (this.isKeyPressed(this.bindings.backward) || this.isKeyPressed('ArrowDown')) z += 1;
+    if (this.isKeyPressed(this.bindings.left) || this.isKeyPressed('ArrowLeft')) x -= 1;
+    if (this.isKeyPressed(this.bindings.right) || this.isKeyPressed('ArrowRight')) x += 1;
 
     // Normalize diagonal movement
     if (x !== 0 && z !== 0) {
@@ -140,7 +150,7 @@ export class InputManager extends EventEmitter {
    * Check if jump is pressed (Space)
    */
   isJumpPressed() {
-    return this.isKeyPressed('Space');
+    return this.isKeyPressed(this.bindings.jump);
   }
 
   /**
@@ -205,6 +215,27 @@ export class InputManager extends EventEmitter {
    */
   isLocked() {
     return this.isPointerLocked;
+  }
+
+  setBinding(action, keyCode) {
+    if (this.bindings[action]) {
+      this.bindings[action] = keyCode;
+    }
+  }
+
+  getBinding(action) {
+    return this.bindings[action];
+  }
+
+  resetBindings() {
+    this.bindings = {
+      forward: 'KeyW',
+      backward: 'KeyS',
+      left: 'KeyA',
+      right: 'KeyD',
+      jump: 'Space',
+      pause: 'Escape'
+    };
   }
 
   dispose() {
