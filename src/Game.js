@@ -35,6 +35,8 @@ export class Game {
     this.canvas = canvas;
     this.isRunning = false;
     this.clock = new THREE.Clock();
+    this.lastInputTime = 0;
+    this.isResuming = false;
 
     // Initialize all systems
     this.initCore();
@@ -231,6 +233,7 @@ export class Game {
   setupEventListeners() {
     // Pointer lock handles the Pause/Resume state transitions to avoid race conditions
     this.inputManager.on('pointerlockchange', (isLocked) => {
+      this.isResuming = false; // Reset flag
       const currentState = this.gameStateManager.getState();
 
       if (isLocked) {
@@ -253,6 +256,8 @@ export class Game {
 
     // Handle pointer lock errors
     this.inputManager.on('pointerlockerror', () => {
+      this.isResuming = false; // Reset flag
+      console.warn('Pointer lock denied/error');
       // If we failed to get the lock while trying to resume, make sure we stay/return to pause menu
       if (!this.gameStateManager.isState(GAME_STATES.PAUSED) &&
         !this.gameStateManager.isState(GAME_STATES.MENU)) {
@@ -276,17 +281,31 @@ export class Game {
       this.player.setMovementLocked(true);
     });
 
-    // Handle Escape key
+    // Handle Escape key (UI Navigation)
     this.inputManager.on('keydown', ({ key }) => {
       if (key === 'Escape') {
-        const currentState = this.gameStateManager.getState();
+        // 1. If Settings are open, close them first
+        if (this.uiManager.isSettingsOpen()) {
+          this.uiManager.hideSettingsMenu();
+          return;
+        }
+        
+        // Note: We do NOT handle Resume here. 
+        // Requesting pointer lock on Escape KEYDOWN causes the browser to 
+        // immediately unlock because Escape is the reserved "Exit" key.
+        // We handle Resume on KEYUP instead.
+      }
+    });
 
-        // If Paused, try to Resume
-        if (currentState === GAME_STATES.PAUSED) {
+    // Handle Escape key (Game Resume)
+    this.inputManager.on('keyup', ({ key }) => {
+      if (key === 'Escape') {
+        const currentState = this.gameStateManager.getState();
+        
+        // If Paused, try to Resume (on key UP to avoid browser conflict)
+        if (currentState === GAME_STATES.PAUSED && !this.uiManager.isSettingsOpen()) {
           this.resumeGame();
         }
-        // If Playing/Countdown/RoundEnd, browser's native Escape will unlock pointer
-        // which triggers our pointerlockchange -> pause flow.
       }
     });
 
@@ -326,8 +345,14 @@ export class Game {
   }
 
   resumeGame() {
-    // Only request lock. The pointerlockchange listener will handle the state resume.
-    this.inputManager.requestPointerLock(this.canvas);
+    // Only request lock if we are actually paused and not already trying to resume
+    if (this.gameStateManager.isState(GAME_STATES.PAUSED) && !this.isResuming) {
+        this.isResuming = true;
+        this.inputManager.requestPointerLock(this.canvas);
+        
+        // Failsafe: Reset flag after 250ms if lock never happens
+        setTimeout(() => { this.isResuming = false; }, 250);
+    }
   }
 
   quitToMenu() {

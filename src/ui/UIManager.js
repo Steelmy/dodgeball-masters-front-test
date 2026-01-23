@@ -553,6 +553,10 @@ export class UIManager {
     return parseInt(text.split(': ')[1]) || 0;
   }
 
+  isSettingsOpen() {
+    return !this.settingsMenu.classList.contains('hidden');
+  }
+
   // --- Screen Management ---
 
   showMainMenu() {
