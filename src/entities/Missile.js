@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Entity } from './Entity.js';
 import { MISSILE, COLORS, DEFLECTION } from '../utils/Constants.js';
 import { MathUtils } from '../utils/MathUtils.js';
@@ -47,64 +48,50 @@ export class Missile extends Entity {
 
   init() {
     this.createMesh();
-    this.createTrail();
+    this.createParticleSystem();
     this.previousPosition.copy(this.position);
   }
 
   createMesh() {
     const group = new THREE.Group();
 
-    // Main missile body (elongated sphere)
-    const bodyGeometry = new THREE.SphereGeometry(MISSILE.RADIUS, 16, 16);
-    bodyGeometry.scale(1, 1, 1.5);
+    const loader = new GLTFLoader();
+    loader.load(
+      '/src/models/missile/0/scene.gltf',
+      (gltf) => {
+        const model = gltf.scene;
+        
+        // Scale and orientation
+        model.scale.set(0.75, 0.75, 0.75); 
+        
+        // Removed rotation.y = Math.PI because it made the missile fly backwards.
+        // The default orientation of the model is correct for lookAt.
 
-    const bodyMaterial = new THREE.MeshStandardMaterial({
-      color: COLORS.MISSILE,
-      emissive: COLORS.MISSILE,
-      emissiveIntensity: 0.5,
-      roughness: 0.2,
-      metalness: 0.8,
-    });
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+          }
+        });
 
-    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.castShadow = true;
-    group.add(body);
-
-    // Glow effect
-    const glowGeometry = new THREE.SphereGeometry(MISSILE.RADIUS * 1.5, 16, 16);
-    const glowMaterial = new THREE.MeshBasicMaterial({
-      color: COLORS.MISSILE,
-      transparent: true,
-      opacity: 0.3,
-    });
-
-    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-    group.add(glow);
-
-    // Point light for dynamic lighting
-    const light = new THREE.PointLight(COLORS.MISSILE, 2, 10);
-    group.add(light);
+        this.missileModel = model;
+        group.add(model);
+        
+        // Apply initial team color to trail/glow if already set
+        if (this.teamId) {
+          this.setTeam(this.teamId);
+        }
+      },
+      undefined,
+      (error) => console.error('Error loading missile:', error)
+    );
 
     this.mesh = group;
     this.mesh.position.copy(this.position);
   }
 
-  createTrail() {
-    // Simple trail using line
-    const trailGeometry = new THREE.BufferGeometry();
-    const trailMaterial = new THREE.LineBasicMaterial({
-      color: COLORS.MISSILE_TRAIL,
-      transparent: true,
-      opacity: 0.6,
-    });
-
-    // Initialize with empty positions
-    const positions = new Float32Array(30 * 3); // 30 points
-    trailGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-    this.trail = new THREE.Line(trailGeometry, trailMaterial);
-    this.trailPositions = [];
-    this.maxTrailLength = 30;
+  createParticleSystem() {
+    this.trailGroup = new THREE.Group();
+    this.particles = [];
   }
 
   update(deltaTime) {
@@ -154,36 +141,67 @@ export class Missile extends Entity {
 
     // Rotate mesh to face direction of travel
     if (this.mesh) {
+      this.mesh.position.copy(this.position); 
+      // lookAt is simpler and works well if we don't have conflicting updates
       this.mesh.lookAt(this.position.clone().add(this.direction));
     }
 
     // Update trail
-    this.updateTrail();
-
-    super.update(deltaTime);
+    this.updateParticles(deltaTime);
 
     return distanceToTarget;
   }
 
-  updateTrail() {
-    // Add current position to trail
-    this.trailPositions.unshift(this.position.clone());
-
-    // Limit trail length
-    if (this.trailPositions.length > this.maxTrailLength) {
-      this.trailPositions.pop();
+  updateParticles(deltaTime) {
+    // Spawn new particle
+    if (this.isActive) {
+      this.spawnParticle();
     }
 
-    // Update trail geometry
-    const positions = this.trail.geometry.attributes.position.array;
-    for (let i = 0; i < this.maxTrailLength; i++) {
-      if (i < this.trailPositions.length) {
-        positions[i * 3] = this.trailPositions[i].x;
-        positions[i * 3 + 1] = this.trailPositions[i].y;
-        positions[i * 3 + 2] = this.trailPositions[i].z;
+    // Update existing particles
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.life -= deltaTime;
+      
+      if (p.life <= 0) {
+        this.trailGroup.remove(p.mesh);
+        this.particles.splice(i, 1);
+      } else {
+        const ratio = p.life / p.maxLife;
+        p.mesh.scale.setScalar(ratio * p.initialSize);
+        p.mesh.material.opacity = ratio;
       }
     }
-    this.trail.geometry.attributes.position.needsUpdate = true;
+  }
+
+  spawnParticle() {
+    const geometry = new THREE.SphereGeometry(0.2, 8, 8); // Simple blob
+    const color = this.teamId === 'player' ? COLORS.TEAM_PLAYER : COLORS.TEAM_BOT;
+    const material = new THREE.MeshBasicMaterial({
+      color: color || COLORS.MISSILE_TRAIL,
+      transparent: true,
+      opacity: 0.8
+    });
+    
+    const mesh = new THREE.Mesh(geometry, material);
+    
+    // Position at the back of the missile
+    const backwardOffset = this.direction.clone().multiplyScalar(-0.8);
+    mesh.position.copy(this.position).add(backwardOffset);
+    
+    // Random jitter for a thicker smoke effect
+    mesh.position.x += (Math.random() - 0.5) * 0.1;
+    mesh.position.y += (Math.random() - 0.5) * 0.1;
+    mesh.position.z += (Math.random() - 0.5) * 0.1;
+
+    this.trailGroup.add(mesh);
+    
+    this.particles.push({
+      mesh: mesh,
+      life: 0.5, // 0.5 seconds life
+      maxLife: 0.5,
+      initialSize: 1.0
+    });
   }
 
   /**
@@ -330,7 +348,12 @@ export class Missile extends Entity {
     this.target = null;
     this.velocity.set(0, 0, 1);
     this.direction.set(0, 0, 1);
-    this.trailPositions = [];
+    
+    // Clear particles
+    if (this.particles) {
+        this.particles.forEach(p => this.trailGroup.remove(p.mesh));
+        this.particles = [];
+    }
 
     // Reset drag state
     this.isDragging = false;
@@ -355,29 +378,8 @@ export class Missile extends Entity {
 
     const color = teamId === 'player' ? COLORS.TEAM_PLAYER : COLORS.TEAM_BOT;
 
-    // Update mesh color
-    if (this.mesh) {
-      // Body (child 0)
-      if (this.mesh.children[0] && this.mesh.children[0].material) {
-        this.mesh.children[0].material.color.setHex(color);
-        this.mesh.children[0].material.emissive.setHex(color);
-      }
-
-      // Glow (child 1)
-      if (this.mesh.children[1] && this.mesh.children[1].material) {
-        this.mesh.children[1].material.color.setHex(color);
-      }
-
-      // Light (child 2)
-      if (this.mesh.children[2]) {
-        this.mesh.children[2].color.setHex(color);
-      }
-    }
-
-    // Update trail color
-    if (this.trail && this.trail.material) {
-      this.trail.material.color.setHex(color);
-    }
+    // Note: We do NOT color the missile body anymore, keeping original texture.
+    // Trail particles are colored on spawn.
   }
 
   /**
@@ -418,13 +420,17 @@ export class Missile extends Entity {
    * Get trail mesh for adding to scene
    */
   getTrail() {
-    return this.trail;
+    return this.trailGroup;
   }
 
   dispose() {
-    if (this.trail) {
-      this.trail.geometry.dispose();
-      this.trail.material.dispose();
+    if (this.trailGroup) {
+      // Cleanup particles
+      this.particles.forEach(p => {
+          p.mesh.geometry.dispose();
+          p.mesh.material.dispose();
+      });
+      this.trailGroup.clear();
     }
     super.dispose();
   }
