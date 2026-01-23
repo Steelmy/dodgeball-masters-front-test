@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Entity } from './Entity.js';
-import { MISSILE, COLORS, DEFLECTION } from '../utils/Constants.js';
+import { MISSILE, COLORS, DEFLECTION, ARENA } from '../utils/Constants.js';
 import { MathUtils } from '../utils/MathUtils.js';
 
 /**
@@ -139,6 +139,9 @@ export class Missile extends Entity {
     // Move missile using velocity
     this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
 
+    // Constrain to environment (floor + arena boundary)
+    this.constrainToEnvironment();
+
     // Rotate mesh to face direction of travel
     if (this.mesh) {
       this.mesh.position.copy(this.position); 
@@ -150,6 +153,38 @@ export class Missile extends Entity {
     this.updateParticles(deltaTime);
 
     return distanceToTarget;
+  }
+
+  /**
+   * Constrain missile position to environment bounds (floor, arena boundary, walls)
+   * Removes velocity component pushing into the surface so the missile slides along it.
+   */
+  constrainToEnvironment() {
+    // Floor constraint
+    const minY = MISSILE.RADIUS;
+    if (this.position.y < minY) {
+      this.position.y = minY;
+      if (this.velocity.y < 0) {
+        this.velocity.y = 0;
+      }
+    }
+
+    // Arena circular boundary
+    const maxDist = ARENA.RADIUS - MISSILE.RADIUS;
+    const distXZ = Math.sqrt(this.position.x * this.position.x + this.position.z * this.position.z);
+    if (distXZ > maxDist) {
+      // Push position back to boundary
+      const scale = maxDist / distXZ;
+      this.position.x *= scale;
+      this.position.z *= scale;
+
+      // Remove outward radial velocity component (slide along wall)
+      const normal = new THREE.Vector3(this.position.x, 0, this.position.z).normalize();
+      const dot = this.velocity.dot(normal);
+      if (dot > 0) {
+        this.velocity.addScaledVector(normal, -dot);
+      }
+    }
   }
 
   updateParticles(deltaTime) {
