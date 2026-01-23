@@ -12,6 +12,7 @@ import { Player } from './entities/Player.js';
 import { Bot } from './entities/Bot.js';
 import { Missile } from './entities/Missile.js';
 import { Arena } from './entities/Arena.js';
+import { Explosion } from './entities/Explosion.js';
 
 // Systems
 import { CollisionSystem } from './systems/CollisionSystem.js';
@@ -22,7 +23,7 @@ import { RoundManager } from './systems/RoundManager.js';
 import { UIManager } from './ui/UIManager.js';
 
 // Utils
-import { GAME_STATES, EVENTS } from './utils/Constants.js';
+import { GAME_STATES, EVENTS, PLAYER } from './utils/Constants.js';
 import { globalEvents } from './utils/EventEmitter.js';
 
 /**
@@ -37,6 +38,7 @@ export class Game {
     this.clock = new THREE.Clock();
     this.lastInputTime = 0;
     this.isResuming = false;
+    this.explosions = [];
 
     // Initialize all systems
     this.initCore();
@@ -322,6 +324,11 @@ export class Game {
       this.cameraController.setRotation(spawnPositions.player.rotation, Math.PI / 12);
     });
 
+    // Spawn explosion on missile hit
+    globalEvents.on(EVENTS.MISSILE_HIT, (data) => {
+      this.spawnExplosion(data.target);
+    });
+
     // Play pulse sound when player activates deflection
     globalEvents.on(EVENTS.PLAYER_DEFLECT, () => {
       this.audioManager.play('pulse');
@@ -366,6 +373,13 @@ export class Game {
     this.player.getMesh().visible = false;
     this.bot.getMesh().visible = false;
     this.missile.hide();
+
+    // Clear explosions
+    for (const explosion of this.explosions) {
+      this.scene.remove(explosion.getMesh());
+      explosion.dispose();
+    }
+    this.explosions = [];
 
     // Switch back to overview camera
     this.cameraController.setOverviewMode();
@@ -414,9 +428,33 @@ export class Game {
         break;
     }
 
+    // Update active explosions
+    this.updateExplosions(deltaTime);
+
     // Always update camera and render
     this.cameraController.update(deltaTime);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  spawnExplosion(target) {
+    const position = target.getPosition();
+    position.y += PLAYER.HEIGHT / 2;
+    const teamId = this.missile.teamId;
+    const explosion = new Explosion(position, teamId);
+    this.explosions.push(explosion);
+    this.scene.add(explosion.getMesh());
+  }
+
+  updateExplosions(deltaTime) {
+    for (let i = this.explosions.length - 1; i >= 0; i--) {
+      const explosion = this.explosions[i];
+      explosion.update(deltaTime);
+      if (explosion.isDone()) {
+        this.scene.remove(explosion.getMesh());
+        explosion.dispose();
+        this.explosions.splice(i, 1);
+      }
+    }
   }
 
   updateGameplay(deltaTime) {
@@ -470,6 +508,12 @@ export class Game {
     this.player.dispose();
     this.bot.dispose();
     this.missile.dispose();
+
+    // Dispose explosions
+    for (const explosion of this.explosions) {
+      explosion.dispose();
+    }
+    this.explosions = [];
 
     // Dispose systems
     this.collisionSystem.dispose();
