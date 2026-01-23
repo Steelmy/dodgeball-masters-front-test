@@ -44,7 +44,6 @@ export class CameraController {
 
     // Smoothing
     this.currentPosition = new THREE.Vector3();
-    this.positionSmoothness = 0.15;
 
     // Input manager reference (set later)
     this.inputManager = null;
@@ -220,8 +219,9 @@ export class CameraController {
 
     const desiredPosition = new THREE.Vector3(camX, camY, camZ);
 
-    // Smooth camera movement
-    this.currentPosition.lerp(desiredPosition, this.positionSmoothness);
+    // Direct camera positioning (No smoothing)
+    this.currentPosition.copy(desiredPosition);
+    
     this.camera.position.copy(this.currentPosition);
 
     // Look at target (offsetted to maintain parallel view)
@@ -275,7 +275,6 @@ export class CameraController {
   setTPSMode(player) {
     this.mode = 'tps';
     this.target = player;
-    this.positionSmoothness = 0.15;
     this.updateTargetMeshVisibility();
   }
 
@@ -294,7 +293,6 @@ export class CameraController {
   toggleMode() {
     if (this.mode === 'fps') {
       this.mode = 'tps';
-      this.positionSmoothness = 0.15;
     } else {
       this.mode = 'fps';
     }
@@ -428,7 +426,6 @@ export class CameraController {
     this.distance = 4;
     this.heightOffset = 0;
     this.sideOffset = 0;
-    this.positionSmoothness = 0.15;
     this.saveMode();
     // Note: Caller needs to handle target mesh visibility update if needed
   }
