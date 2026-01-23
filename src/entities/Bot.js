@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Entity } from './Entity.js';
 import { PLAYER, COLORS, DEFLECTION, TEAMS, BOT } from '../utils/Constants.js';
 import { MathUtils } from '../utils/MathUtils.js';
@@ -31,7 +32,7 @@ export class Bot extends Entity {
     this.facingDirection = new THREE.Vector3(0, 0, 1); // Facing toward player
 
     // Visual elements
-
+    this.weaponMesh = null;
 
     this.init();
   }
@@ -39,6 +40,41 @@ export class Bot extends Entity {
   init() {
     this.createMesh();
     this.createDeflectZone();
+    this.loadWeapon();
+  }
+
+  loadWeapon() {
+    const loader = new GLTFLoader();
+    loader.load(
+      '/src/models/weapons/sci-fi-weapon/scene.gltf',
+      (gltf) => {
+        const weapon = gltf.scene;
+
+        // Scale the weapon (model is very small)
+        weapon.scale.set(2, 2, 2);
+
+        // Position weapon at right hand position
+        weapon.position.set(0.35, PLAYER.HEIGHT * 0.45, -0.25);
+
+        // Rotate weapon to point forward
+        weapon.rotation.set(0, Math.PI, 0);
+
+        // Enable shadows
+        weapon.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+
+        this.weaponMesh = weapon;
+        this.mesh.add(weapon);
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading weapon model:', error);
+      }
+    );
   }
 
   createDeflectZone() {

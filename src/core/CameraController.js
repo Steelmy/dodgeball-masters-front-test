@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { CAMERA, PLAYER } from '../utils/Constants.js';
 import { MathUtils } from '../utils/MathUtils.js';
 
@@ -47,8 +48,49 @@ export class CameraController {
     // Input manager reference (set later)
     this.inputManager = null;
 
+    // FPS weapon (viewmodel attached to camera)
+    this.fpsWeapon = null;
+    this.loadFPSWeapon();
+
     this.setInitialPosition();
     this.setupResizeHandler();
+  }
+
+  loadFPSWeapon() {
+    const loader = new GLTFLoader();
+    loader.load(
+      '/src/models/weapons/sci-fi-weapon/scene.gltf',
+      (gltf) => {
+        const weapon = gltf.scene;
+
+        // Scale for FPS view (closer to camera, so smaller)
+        weapon.scale.set(1.5, 1.5, 1.5);
+
+        // Position: bottom-right of screen, pointing forward
+        weapon.position.set(0.3, -0.25, -0.5);
+
+        // Rotate weapon to point forward
+        weapon.rotation.set(0, Math.PI, 0);
+
+        // Enable shadows
+        weapon.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = false;
+          }
+        });
+
+        this.fpsWeapon = weapon;
+        this.camera.add(weapon);
+
+        // Set initial visibility based on current mode
+        this.fpsWeapon.visible = this.mode === 'fps';
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading FPS weapon model:', error);
+      }
+    );
   }
 
   setInitialPosition() {
@@ -262,6 +304,11 @@ export class CameraController {
       // In FPS mode, hide the player mesh (locally only)
       // In TPS mode, show the player mesh
       this.target.mesh.visible = this.mode !== 'fps';
+    }
+
+    // Update FPS weapon visibility
+    if (this.fpsWeapon) {
+      this.fpsWeapon.visible = this.mode === 'fps';
     }
   }
 
