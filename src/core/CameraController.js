@@ -212,7 +212,7 @@ export class CameraController {
     if (this.sideOffset !== 0) {
       offsetX = this.sideOffset * Math.cos(this.yaw);
       offsetZ = this.sideOffset * -Math.sin(this.yaw);
-      
+
       camX += offsetX;
       camZ += offsetZ;
     }
@@ -221,7 +221,7 @@ export class CameraController {
 
     // Direct camera positioning (No smoothing)
     this.currentPosition.copy(desiredPosition);
-    
+
     this.camera.position.copy(this.currentPosition);
 
     // Look at target (offsetted to maintain parallel view)
@@ -363,6 +363,9 @@ export class CameraController {
    */
   applySavedMode(player) {
     this.target = player;
+    this.distance = 4;
+    this.heightOffset = 0;
+    this.sideOffset = 0;
 
     this.updateTargetMeshVisibility();
   }
@@ -376,7 +379,6 @@ export class CameraController {
     this.heightOffset = 10;
     this.yaw = 0;
     this.pitch = Math.PI * 0.25; // Looking down at 45°
-    this.positionSmoothness = 0.05;
   }
 
   /**

@@ -121,7 +121,6 @@ export class Game {
 
     // Bind UI buttons
     this.uiManager.bindStartButton(() => this.startGame());
-    this.uiManager.bindControlsButton();
     this.uiManager.bindResumeButton(() => this.resumeGame());
     this.uiManager.bindQuitButton(() => this.quitToMenu());
     this.uiManager.bindPlayAgainButton(() => this.startGame());
@@ -131,13 +130,18 @@ export class Game {
     this.uiManager.bindSettingsActions({
       getValues: () => {
         const cam = this.cameraController;
+        let savedCam = {};
+        try {
+          savedCam = JSON.parse(localStorage.getItem('dodgeball_camera_settings')) || {};
+        } catch (e) { }
+
         return {
           camera: {
             mode: cam.mode,
-            fov: cam.camera.fov,
-            distance: cam.distance,
-            heightOffset: cam.heightOffset,
-            sideOffset: cam.sideOffset
+            fov: savedCam.fov || cam.camera.fov,
+            distance: savedCam.distance !== undefined ? savedCam.distance : 4,
+            heightOffset: savedCam.heightOffset !== undefined ? savedCam.heightOffset : 0,
+            sideOffset: savedCam.sideOffset !== undefined ? savedCam.sideOffset : 0
           },
           volume: this.audioManager.volume,
           bindings: this.inputManager.bindings
@@ -149,10 +153,10 @@ export class Game {
           else this.cameraController.setTPSMode(this.player);
           this.cameraController.saveMode();
         }
-        
+
         if (changes.fov) this.cameraController.setFOV(changes.fov);
         if (changes.distance) this.cameraController.setDistance(changes.distance);
-        
+
         // Handle offsets
         if (changes.heightOffset !== undefined || changes.sideOffset !== undefined) {
           this.cameraController.setOffsets(changes.heightOffset, changes.sideOffset);

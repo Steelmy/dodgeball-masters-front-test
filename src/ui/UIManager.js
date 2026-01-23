@@ -74,18 +74,7 @@ export class UIManager {
           <button class="btn-primary group cursor-pointer" id="btn-start">
             <span class="group-hover:translate-x-1 transition-transform inline-block">Start Training</span>
           </button>
-          <button class="btn-secondary cursor-pointer" id="btn-controls">Controls</button>
-        </div>
-
-        <div id="controls-panel" class="hidden mt-8 text-left bg-slate-800/50 p-6 rounded-xl border border-white/5">
-          <h3 class="text-cyan-400 font-bold mb-4 uppercase tracking-wider text-sm border-b border-white/10 pb-2">Control Systems</h3>
-          <ul class="space-y-3 text-slate-300 text-sm font-mono">
-            <li class="flex justify-between"><span>Aiming</span> <span class="bg-slate-700 px-2 py-0.5 rounded text-white">MOUSE</span></li>
-            <li class="flex justify-between"><span>Movement</span> <span class="bg-slate-700 px-2 py-0.5 rounded text-white">W A S D</span></li>
-            <li class="flex justify-between"><span>Jump / Dash</span> <span class="bg-slate-700 px-2 py-0.5 rounded text-white">SPACE</span></li>
-            <li class="flex justify-between"><span>Deflect</span> <span class="bg-slate-700 px-2 py-0.5 rounded text-white">R-CLICK</span></li>
-            <li class="flex justify-between"><span>Pause</span> <span class="bg-slate-700 px-2 py-0.5 rounded text-white">ESC</span></li>
-          </ul>
+          <button class="btn-secondary cursor-pointer" id="btn-settings-main">Settings</button>
         </div>
       </div>
     `;
@@ -244,23 +233,23 @@ export class UIManager {
           <div class="grid grid-cols-1 gap-3">
              <div class="flex items-center justify-between bg-slate-800/30 p-2 rounded border border-white/5">
                 <span class="text-sm font-bold text-slate-300">Move Forward</span>
-                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-[60px] border border-white/10 hover:border-cyan-500 transition-colors" data-action="forward">KeyW</button>
+                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-15 border border-white/10 hover:border-cyan-500 transition-colors" data-action="forward">KeyW</button>
              </div>
              <div class="flex items-center justify-between bg-slate-800/30 p-2 rounded border border-white/5">
                 <span class="text-sm font-bold text-slate-300">Move Backward</span>
-                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-[60px] border border-white/10 hover:border-cyan-500 transition-colors" data-action="backward">KeyS</button>
+                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-15 border border-white/10 hover:border-cyan-500 transition-colors" data-action="backward">KeyS</button>
              </div>
              <div class="flex items-center justify-between bg-slate-800/30 p-2 rounded border border-white/5">
                 <span class="text-sm font-bold text-slate-300">Move Left</span>
-                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-[60px] border border-white/10 hover:border-cyan-500 transition-colors" data-action="left">KeyA</button>
+                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-15 border border-white/10 hover:border-cyan-500 transition-colors" data-action="left">KeyA</button>
              </div>
              <div class="flex items-center justify-between bg-slate-800/30 p-2 rounded border border-white/5">
                 <span class="text-sm font-bold text-slate-300">Move Right</span>
-                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-[60px] border border-white/10 hover:border-cyan-500 transition-colors" data-action="right">KeyD</button>
+                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-15 border border-white/10 hover:border-cyan-500 transition-colors" data-action="right">KeyD</button>
              </div>
              <div class="flex items-center justify-between bg-slate-800/30 p-2 rounded border border-white/5">
                 <span class="text-sm font-bold text-slate-300">Jump</span>
-                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-[60px] border border-white/10 hover:border-cyan-500 transition-colors" data-action="jump">Space</button>
+                <button class="key-bind-btn px-3 py-1 bg-slate-700 rounded text-xs font-mono text-white min-w-15 border border-white/10 hover:border-cyan-500 transition-colors" data-action="jump">Space</button>
              </div>
           </div>
           <div class="pt-4 border-t border-white/5">
@@ -300,8 +289,8 @@ export class UIManager {
         <h3 class="text-xl font-bold text-white mb-4">Confirm Reset</h3>
         <p class="text-sm text-slate-300 mb-8" id="confirmation-message">Are you sure?</p>
         <div class="flex justify-center gap-4">
-          <button class="btn-secondary min-w-[100px]" id="btn-confirm-cancel">Cancel</button>
-          <button class="btn-primary bg-rose-600 hover:bg-rose-500 border-rose-500 min-w-[100px]" id="btn-confirm-ok">Confirm</button>
+          <button class="btn-secondary min-w-25" id="btn-confirm-cancel">Cancel</button>
+          <button class="btn-primary bg-rose-600 hover:bg-rose-500 border-rose-500 min-w-25" id="btn-confirm-ok">Confirm</button>
         </div>
       </div>
     `;
@@ -316,7 +305,7 @@ export class UIManager {
 
   showConfirmationModal(message, onConfirm) {
     document.getElementById('confirmation-message').textContent = message;
-    
+
     // Replace old confirm button to clear previous listeners
     const oldBtn = document.getElementById('btn-confirm-ok');
     const newBtn = oldBtn.cloneNode(true);
@@ -590,14 +579,38 @@ export class UIManager {
   showSettingsMenu() {
     this.settingsMenu.classList.remove('hidden');
     this.settingsMenu.classList.add('flex');
-    this.pauseMenu.classList.add('hidden'); // Hide pause menu while settings is open
+
+    // If pause menu is open, hide it
+    if (!this.pauseMenu.classList.contains('hidden')) {
+      this.pauseMenu.classList.add('hidden');
+      this.pauseMenu.dataset.wasOpen = 'true';
+    } else {
+      this.pauseMenu.dataset.wasOpen = 'false';
+    }
+
+    // If main menu is open, hide it
+    if (!this.mainMenu.classList.contains('hidden')) {
+      this.mainMenu.classList.add('hidden');
+      this.mainMenu.dataset.wasOpen = 'true';
+    } else {
+      this.mainMenu.dataset.wasOpen = 'false';
+    }
   }
 
   hideSettingsMenu() {
     this.settingsMenu.classList.add('hidden');
     this.settingsMenu.classList.remove('flex');
-    this.pauseMenu.classList.remove('hidden'); // Show pause menu again
-    this.pauseMenu.classList.add('flex');
+
+    // Restore previous menu
+    if (this.pauseMenu.dataset.wasOpen === 'true') {
+      this.pauseMenu.classList.remove('hidden');
+      this.pauseMenu.classList.add('flex');
+    }
+
+    if (this.mainMenu.dataset.wasOpen === 'true') {
+      this.mainMenu.classList.remove('hidden');
+      this.mainMenu.classList.add('flex');
+    }
   }
 
   hideAll() {
@@ -613,19 +626,6 @@ export class UIManager {
 
   bindStartButton(callback) {
     document.getElementById('btn-start').addEventListener('click', callback);
-  }
-
-  bindControlsButton() {
-    const btn = document.getElementById('btn-controls');
-    const panel = document.getElementById('controls-panel');
-
-    // Remove existing listeners to prevent duplicates if called multiple times (though init is once)
-    const newBtn = btn.cloneNode(true);
-    btn.parentNode.replaceChild(newBtn, btn);
-
-    newBtn.addEventListener('click', () => {
-      panel.classList.toggle('hidden');
-    });
   }
 
   bindResumeButton(callback) {
@@ -647,14 +647,18 @@ export class UIManager {
   bindSettingsActions(callbacks) {
     const { onCameraChange, onAudioChange, onControlChange, onResetCamera, onResetControls, onResetAudio, getValues } = callbacks;
 
+    // Open function
+    const openSettings = () => {
+      // Refresh values when opening
+      const values = getValues();
+      this.updateSettingsUI(values);
+      this.showSettingsMenu();
+    };
+
     // Open/Close
-    document.getElementById('btn-settings-open').addEventListener('click', () => {
-       // Refresh values when opening
-       const values = getValues();
-       this.updateSettingsUI(values);
-       this.showSettingsMenu();
-    });
-    
+    document.getElementById('btn-settings-open').addEventListener('click', openSettings);
+    document.getElementById('btn-settings-main').addEventListener('click', openSettings);
+
     document.getElementById('btn-settings-close').addEventListener('click', () => this.hideSettingsMenu());
     document.getElementById('btn-settings-save').addEventListener('click', () => this.hideSettingsMenu());
 
@@ -716,62 +720,63 @@ export class UIManager {
       btn.addEventListener('click', () => {
         const action = btn.dataset.action;
         const originalText = btn.textContent;
-        
+
         btn.textContent = '...';
         btn.classList.add('bg-cyan-600', 'text-white');
 
         const handleKey = (e) => {
           e.preventDefault();
           e.stopPropagation();
-          
+
           if (e.code === 'Escape') {
             btn.textContent = originalText;
           } else {
             btn.textContent = e.code;
             onControlChange(action, e.code);
           }
-          
+
           btn.classList.remove('bg-cyan-600', 'text-white');
           window.removeEventListener('keydown', handleKey);
         };
 
-                  window.addEventListener('keydown', handleKey, { once: true });
-              });
-            });
-        
-                // Reset Buttons
-                document.getElementById('btn-reset-camera').addEventListener('click', () => {
-                  this.showConfirmationModal('Reset camera settings to default?', () => {
-                    onResetCamera();
-                    this.updateSettingsUI(getValues());
-                  });
-                });
-            
-                document.getElementById('btn-reset-controls').addEventListener('click', () => {
-                  this.showConfirmationModal('Reset control bindings to default?', () => {
-                    onResetControls();
-                    this.updateSettingsUI(getValues());
-                  });
-                });
-            
-                document.getElementById('btn-reset-audio').addEventListener('click', () => {
-                  this.showConfirmationModal('Reset audio settings to default?', () => {
-                    onResetAudio();
-                    this.updateSettingsUI(getValues());
-                  });
-                });
-              }        
-          updateSettingsUI(values) {    if (!values) return;
+        window.addEventListener('keydown', handleKey, { once: true });
+      });
+    });
+
+    // Reset Buttons
+    document.getElementById('btn-reset-camera').addEventListener('click', () => {
+      this.showConfirmationModal('Reset camera settings to default?', () => {
+        onResetCamera();
+        this.updateSettingsUI(getValues());
+      });
+    });
+
+    document.getElementById('btn-reset-controls').addEventListener('click', () => {
+      this.showConfirmationModal('Reset control bindings to default?', () => {
+        onResetControls();
+        this.updateSettingsUI(getValues());
+      });
+    });
+
+    document.getElementById('btn-reset-audio').addEventListener('click', () => {
+      this.showConfirmationModal('Reset audio settings to default?', () => {
+        onResetAudio();
+        this.updateSettingsUI(getValues());
+      });
+    });
+  }
+  updateSettingsUI(values) {
+    if (!values) return;
 
     // Camera
     if (values.camera) {
       const { mode, fov, distance, heightOffset, sideOffset } = values.camera;
-      
+
       // Mode
       const btnFps = document.getElementById('cam-mode-fps');
       const btnTps = document.getElementById('cam-mode-tps');
       const tpsSettings = document.getElementById('tps-settings');
-      
+
       if (mode === 'fps') {
         btnFps.className = 'px-4 py-1 text-xs font-bold rounded transition-colors bg-cyan-600 text-white';
         btnTps.className = 'px-4 py-1 text-xs font-bold rounded transition-colors text-slate-400 hover:text-white';
