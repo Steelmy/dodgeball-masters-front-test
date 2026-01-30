@@ -65,25 +65,34 @@ export class Player extends Entity {
     const weapon = AssetManager.getModelClone('weapon');
     if (!weapon) return;
 
-    // Scale the weapon (model is very small)
-    weapon.scale.set(2, 2, 2);
+    // Center the model (some GLTF exports have offset transforms)
+    const box = new THREE.Box3().setFromObject(weapon);
+    const center = box.getCenter(new THREE.Vector3());
+    weapon.position.sub(center);
+
+    // Wrap in a group for easier positioning
+    const weaponGroup = new THREE.Group();
+    weaponGroup.add(weapon);
+
+    // Scale the weapon
+    weaponGroup.scale.set(0.015, 0.015, 0.015);
 
     // Position weapon at right hand position
-    weapon.position.set(0.35, PLAYER.HEIGHT * 0.45, -0.25);
+    weaponGroup.position.set(0.35, PLAYER.HEIGHT * 0.45, -0.25);
 
     // Rotate weapon to point forward
-    weapon.rotation.set(0, Math.PI, 0);
+    weaponGroup.rotation.set(0, Math.PI, 0);
 
     // Enable shadows
-    weapon.traverse((child) => {
+    weaponGroup.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
       }
     });
 
-    this.weaponMesh = weapon;
-    this.mesh.add(weapon);
+    this.weaponMesh = weaponGroup;
+    this.mesh.add(weaponGroup);
   }
 
   createMesh() {

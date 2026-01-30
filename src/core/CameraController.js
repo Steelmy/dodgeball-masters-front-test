@@ -61,25 +61,34 @@ export class CameraController {
     const weapon = AssetManager.getModelClone('weapon');
     if (!weapon) return;
 
-    // Scale for FPS view (closer to camera, so smaller)
-    weapon.scale.set(1.5, 1.5, 1.5);
+    // Center the model (some GLTF exports have offset transforms)
+    const box = new THREE.Box3().setFromObject(weapon);
+    const center = box.getCenter(new THREE.Vector3());
+    weapon.position.sub(center);
+
+    // Wrap in a group for easier positioning
+    const weaponGroup = new THREE.Group();
+    weaponGroup.add(weapon);
+
+    // Scale for FPS view
+    weaponGroup.scale.set(0.012, 0.012, 0.012);
 
     // Position: bottom-right of screen, pointing forward
-    weapon.position.set(0.3, -0.25, -0.5);
+    weaponGroup.position.set(0.3, -0.25, -0.5);
 
     // Rotate weapon to point forward
-    weapon.rotation.set(0, Math.PI, 0);
+    weaponGroup.rotation.set(0, Math.PI, 0);
 
     // Enable shadows
-    weapon.traverse((child) => {
+    weaponGroup.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = false;
       }
     });
 
-    this.fpsWeapon = weapon;
-    this.camera.add(weapon);
+    this.fpsWeapon = weaponGroup;
+    this.camera.add(weaponGroup);
 
     // Set initial visibility based on current mode
     this.fpsWeapon.visible = this.mode === 'fps';
