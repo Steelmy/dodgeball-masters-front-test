@@ -14,6 +14,7 @@ import { Bot } from './entities/Bot.js';
 import { Missile } from './entities/Missile.js';
 import { Arena } from './entities/Arena.js';
 import { Explosion } from './entities/Explosion.js';
+import { DeflectEffect } from './entities/DeflectEffect.js';
 
 // Systems
 import { CollisionSystem } from './systems/CollisionSystem.js';
@@ -40,6 +41,7 @@ export class Game {
     this.lastInputTime = 0;
     this.isResuming = false;
     this.explosions = [];
+    this.deflectEffects = [];
 
     // Initialize all systems
     this.initCore();
@@ -359,9 +361,18 @@ export class Game {
       this.spawnExplosion(data.target);
     });
 
-    // Play pulse sound when player activates deflection
-    globalEvents.on(EVENTS.PLAYER_DEFLECT, () => {
+    // Spawn deflect effect when player activates deflection (not under cooldown)
+    globalEvents.on(EVENTS.PLAYER_DEFLECT, (data) => {
       this.audioManager.play('pulse');
+      this.spawnDeflectEffect(data.player);
+    });
+
+    // Spawn deflect effect when bot deflects (bot only deflects on actual hit)
+    globalEvents.on(EVENTS.MISSILE_DEFLECT, (data) => {
+      // Only spawn effect for bot (player effect is handled by PLAYER_DEFLECT)
+      if (data.deflector !== this.player) {
+        this.spawnDeflectEffect(data.deflector);
+      }
     });
 
   }
@@ -410,6 +421,13 @@ export class Game {
       explosion.dispose();
     }
     this.explosions = [];
+
+    // Clear deflect effects
+    for (const effect of this.deflectEffects) {
+      this.scene.remove(effect.getMesh());
+      effect.dispose();
+    }
+    this.deflectEffects = [];
 
     // Switch back to overview camera
     this.cameraController.setOverviewMode();
@@ -461,6 +479,9 @@ export class Game {
     // Update active explosions
     this.updateExplosions(deltaTime);
 
+    // Update deflect effects
+    this.updateDeflectEffects(deltaTime);
+
     // Always update camera and render
     this.cameraController.update(deltaTime);
     this.renderer.render(this.scene, this.camera);
@@ -475,6 +496,22 @@ export class Game {
     this.scene.add(explosion.getMesh());
   }
 
+  spawnDeflectEffect(deflector) {
+    // Position at deflector's eye level
+    const position = deflector.getPosition();
+    position.y += PLAYER.HEIGHT * 0.75;
+
+    // Direction the deflector is facing
+    const direction = deflector.getForwardDirection();
+
+    // Team ID for coloring
+    const teamId = deflector.team;
+
+    const effect = new DeflectEffect(position, direction, teamId);
+    this.deflectEffects.push(effect);
+    this.scene.add(effect.getMesh());
+  }
+
   updateExplosions(deltaTime) {
     for (let i = this.explosions.length - 1; i >= 0; i--) {
       const explosion = this.explosions[i];
@@ -483,6 +520,18 @@ export class Game {
         this.scene.remove(explosion.getMesh());
         explosion.dispose();
         this.explosions.splice(i, 1);
+      }
+    }
+  }
+
+  updateDeflectEffects(deltaTime) {
+    for (let i = this.deflectEffects.length - 1; i >= 0; i--) {
+      const effect = this.deflectEffects[i];
+      effect.update(deltaTime);
+      if (effect.isDone()) {
+        this.scene.remove(effect.getMesh());
+        effect.dispose();
+        this.deflectEffects.splice(i, 1);
       }
     }
   }
@@ -544,6 +593,12 @@ export class Game {
       explosion.dispose();
     }
     this.explosions = [];
+
+    // Dispose deflect effects
+    for (const effect of this.deflectEffects) {
+      effect.dispose();
+    }
+    this.deflectEffects = [];
 
     // Dispose systems
     this.collisionSystem.dispose();

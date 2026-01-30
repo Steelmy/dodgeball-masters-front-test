@@ -39,7 +39,6 @@ export class Bot extends Entity {
 
   init() {
     this.createMesh();
-    this.createDeflectZone();
     this.loadWeapon();
   }
 
@@ -67,35 +66,6 @@ export class Bot extends Entity {
 
     this.weaponMesh = weapon;
     this.mesh.add(weapon);
-  }
-
-  createDeflectZone() {
-    const geometry = new THREE.ConeGeometry(
-      Math.tan(this.deflectConeAngle) * this.deflectRange,
-      this.deflectRange,
-      16,
-      1,
-      true
-    );
-
-    // Align apex to origin (pivot point)
-    geometry.translate(0, -this.deflectRange / 2, 0);
-
-    const material = new THREE.MeshBasicMaterial({
-      color: COLORS.DEFLECT_ZONE,
-      transparent: true,
-      opacity: 0.15,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-
-    this.deflectZoneMesh = new THREE.Mesh(geometry, material);
-    this.deflectZoneMesh.rotation.x = -Math.PI / 2;
-    this.deflectZoneMesh.position.set(0, PLAYER.HEIGHT * 0.75, 0);
-    this.deflectZoneMesh.visible = false; // Will set in update
-
-    this.mesh.add(this.deflectZoneMesh);
   }
 
   createMesh() {
@@ -186,11 +156,6 @@ export class Bot extends Entity {
       this.facePosition(missilePosition);
     }
 
-    // Cone is visible if alive (feedback)
-    if (this.deflectZoneMesh) {
-      this.deflectZoneMesh.visible = this.isAlive;
-    }
-
     super.update(deltaTime);
   }
 
@@ -209,13 +174,8 @@ export class Bot extends Entity {
     this.mesh.lookAt(position.x, this.position.y, position.z);
     this.rotation.copy(this.mesh.rotation); // Sync with Entity state ensures super.update doesn't reset it
 
-    // Pitch (for cone) - direction.y is sine of pitch
+    // Pitch (for head tracking)
     const pitch = Math.asin(direction.y);
-    if (this.deflectZoneMesh) {
-      // Rot X -90 is forward (+Z). - Pitch to look up.
-      this.deflectZoneMesh.rotation.x = -Math.PI / 2 - pitch;
-    }
-
     if (this.headGroup) {
       this.headGroup.rotation.x = -pitch;
     }

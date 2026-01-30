@@ -50,7 +50,6 @@ export class Player extends Entity {
     this.missile = null;
 
     // Visual elements
-    this.deflectZoneMesh = null;
     this.weaponMesh = null;
 
     this.init();
@@ -58,7 +57,6 @@ export class Player extends Entity {
 
   init() {
     this.createMesh();
-    this.createDeflectZone();
     this.loadWeapon();
   }
 
@@ -145,40 +143,6 @@ export class Player extends Entity {
     this.mesh.position.copy(this.position);
   }
 
-  createDeflectZone() {
-    // Visual cone showing deflect range
-    const geometry = new THREE.ConeGeometry(
-      Math.tan(this.deflectConeAngle) * this.deflectRange,
-      this.deflectRange,
-      16,
-      1,
-      true
-    );
-
-    // Align apex to origin (pivot point)
-    geometry.translate(0, -this.deflectRange / 2, 0);
-
-    const material = new THREE.MeshBasicMaterial({
-      color: COLORS.DEFLECT_ZONE,
-      transparent: true,
-      opacity: 0.15,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-
-    this.deflectZoneMesh = new THREE.Mesh(geometry, material);
-
-    // Initial rotation to point forward
-    this.deflectZoneMesh.rotation.x = Math.PI / 2;
-
-    // Position at Eye Level (matches logical check origin)
-    this.deflectZoneMesh.position.set(0, PLAYER.HEIGHT * 0.75, 0);
-    this.deflectZoneMesh.visible = false;
-
-    this.mesh.add(this.deflectZoneMesh);
-  }
-
 
 
   update(deltaTime, arena) {
@@ -215,9 +179,6 @@ export class Player extends Entity {
       globalEvents.emit(EVENTS.PLAYER_DEFLECT, { player: this });
     }
     this.wasDeflectPressed = isDeflectPressed;
-
-    // Show deflect zone when action key is held (right click)
-    this.deflectZoneMesh.visible = isDeflectPressed;
 
     // Handle missile drag mechanic
     // During drag window, mouse movement influences missile direction (no need to hold right-click)
@@ -284,12 +245,6 @@ export class Player extends Entity {
       // Update mesh rotation (yaw only)
       if (this.mesh) {
         this.mesh.rotation.y = this.rotationY;
-      }
-
-      // Update deflect cone rotation (pitch)
-      if (this.deflectZoneMesh) {
-        // Base rotation is PI/2. Subtract pitch because... Three.js rotations.
-        this.deflectZoneMesh.rotation.x = Math.PI / 2 - pitch;
       }
 
       // Update facing direction based on rotation (3D)
