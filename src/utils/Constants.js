@@ -89,13 +89,13 @@ export const MAPS = {
   orbital: {
     id: 'orbital',
     name: 'Orbital',
-    path: '/src/models/maps/0/scene.gltf',
+    path: `${import.meta.env.BASE_URL}models/maps/0/scene.gltf`,
     scale: 3
   },
   gladiator: {
     id: 'gladiator',
     name: 'Gladiator',
-    path: '/src/models/maps/1/scene.gltf',
+    path: `${import.meta.env.BASE_URL}models/maps/1/scene.gltf`,
     scale: 3
   }
 };
