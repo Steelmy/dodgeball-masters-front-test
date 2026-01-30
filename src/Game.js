@@ -40,6 +40,7 @@ export class Game {
     this.clock = new THREE.Clock();
     this.lastInputTime = 0;
     this.explosions = [];
+    this.explosionPools = { player: [], bot: [] };
     this.deflectEffects = [];
 
     // Initialize all systems
@@ -539,7 +540,18 @@ export class Game {
     const position = target.getPosition();
     position.y += PLAYER.HEIGHT / 2;
     const teamId = this.missile.teamId;
-    const explosion = new Explosion(position, teamId);
+    
+    // Try to get from pool
+    let explosion;
+    const pool = this.explosionPools[teamId];
+    
+    if (pool && pool.length > 0) {
+      explosion = pool.pop();
+      explosion.reset(position);
+    } else {
+      explosion = new Explosion(position, teamId);
+    }
+    
     this.explosions.push(explosion);
     this.scene.add(explosion.getMesh());
   }
@@ -566,7 +578,15 @@ export class Game {
       explosion.update(deltaTime);
       if (explosion.isDone()) {
         this.scene.remove(explosion.getMesh());
-        explosion.dispose();
+        
+        // Return to pool
+        const teamId = explosion.teamId;
+        if (this.explosionPools[teamId]) {
+          this.explosionPools[teamId].push(explosion);
+        } else {
+          explosion.dispose();
+        }
+        
         this.explosions.splice(i, 1);
       }
     }
@@ -641,6 +661,14 @@ export class Game {
       explosion.dispose();
     }
     this.explosions = [];
+
+    // Dispose explosion pools
+    for (const pool of Object.values(this.explosionPools)) {
+      for (const explosion of pool) {
+        explosion.dispose();
+      }
+    }
+    this.explosionPools = { player: [], bot: [] };
 
     // Dispose deflect effects
     for (const effect of this.deflectEffects) {
