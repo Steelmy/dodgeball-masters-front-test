@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 import { Entity } from './Entity.js';
-import { PLAYER, COLORS, DEFLECTION, TEAMS, BOT } from '../utils/Constants.js';
+import { PLAYER, COLORS, DEFLECTION, TEAMS, BOT, BOT_DIFFICULTY, MISSILE, ARENA } from '../utils/Constants.js';
 import { MathUtils } from '../utils/MathUtils.js';
 import { AssetManager } from '../core/AssetManager.js';
 
 /**
  * Bot
  * AI-controlled opponent for training mode
- * - Stationary position
- * - Perfect deflection (never misses)
+ * - Moves intelligently to dodge and position
+ * - Has accuracy affected by missile speed
+ * - Difficulty levels: easy, medium, hard
  */
 
 export class Bot extends Entity {
@@ -24,19 +25,62 @@ export class Bot extends Entity {
     // Deflection
     this.deflectRange = BOT.DEFLECT_RANGE;
     this.deflectConeAngle = DEFLECTION.CONE_ANGLE;
-    this.perfectDeflection = BOT.PERFECT_DEFLECTION;
     this.canDeflect = true;
     this.deflectCooldown = 0;
+
+    // Movement (same speed as player for fairness)
+    this.moveSpeed = PLAYER.MOVE_SPEED;
+
+    // Difficulty settings (defaults to medium)
+    this.difficulty = 'medium';
+    this.baseAccuracy = BOT_DIFFICULTY.medium.BASE_ACCURACY;
+    this.accuracyLossPerSpeed = BOT_DIFFICULTY.medium.ACCURACY_LOSS_PER_SPEED;
+    this.minAccuracy = BOT_DIFFICULTY.medium.MIN_ACCURACY;
+    this.reactionDelay = BOT_DIFFICULTY.medium.REACTION_DELAY;
+    this.dragSkill = BOT_DIFFICULTY.medium.DRAG_SKILL;
 
     // State
     this.isAlive = true;
     this.isTargeted = false;
-    this.facingDirection = new THREE.Vector3(0, 0, 1); // Facing toward player
+    this.facingDirection = new THREE.Vector3(0, 0, 1);
+
+    // AI state
+    this.playerRef = null;
+    this.missileRef = null;
+    this.dodgeDirection = 1; // 1 = right, -1 = left
+    this.dodgeTimer = 0;
+    this.aiState = 'idle'; // 'idle', 'strafing', 'dodging', 'approaching'
+    this.reactionTimer = 0; // Delay before attempting deflect
 
     // Visual elements
     this.weaponMesh = null;
 
     this.init();
+  }
+
+  /**
+   * Set bot difficulty
+   */
+  setDifficulty(level) {
+    const preset = BOT_DIFFICULTY[level];
+    if (!preset) {
+      console.warn(`Unknown difficulty: ${level}`);
+      return;
+    }
+
+    this.difficulty = level;
+    this.baseAccuracy = preset.BASE_ACCURACY;
+    this.accuracyLossPerSpeed = preset.ACCURACY_LOSS_PER_SPEED;
+    this.minAccuracy = preset.MIN_ACCURACY;
+    this.reactionDelay = preset.REACTION_DELAY;
+    this.dragSkill = preset.DRAG_SKILL;
+  }
+
+  /**
+   * Get current difficulty
+   */
+  getDifficulty() {
+    return this.difficulty;
   }
 
   init() {
@@ -159,6 +203,14 @@ export class Bot extends Entity {
 
 
 
+  /**
+   * Set references for AI behavior
+   */
+  setReferences(player, missile) {
+    this.playerRef = player;
+    this.missileRef = missile;
+  }
+
   update(deltaTime, missilePosition = null) {
     if (!this.isActive || !this.isAlive) return;
 
@@ -171,12 +223,190 @@ export class Bot extends Entity {
       }
     }
 
-    // Bot always rotates to face the missile
-    if (missilePosition) {
+    // Update reaction timer (for deflect delay)
+    if (this.missileRef && this.missileRef.isActive && this.missileRef.target === this) {
+      this.reactionTimer += deltaTime * 1000;
+    } else {
+      this.reactionTimer = 0;
+    }
+
+    // Update dodge timer
+    this.dodgeTimer -= deltaTime;
+    if (this.dodgeTimer <= 0) {
+      this.dodgeTimer = 0.5 + Math.random() * 1; // Change direction every 0.5-1.5s
+      this.dodgeDirection = Math.random() > 0.5 ? 1 : -1;
+    }
+
+    // AI Movement
+    this.updateAI(deltaTime, missilePosition);
+
+    // Handle missile drag (bot can also influence missile direction after deflect)
+    this.handleDrag();
+
+    // Face the missile or player
+    if (missilePosition && this.missileRef && this.missileRef.isActive) {
       this.facePosition(missilePosition);
+    } else if (this.playerRef) {
+      this.facePosition(this.playerRef.getPosition());
     }
 
     super.update(deltaTime);
+  }
+
+  /**
+   * Handle missile drag mechanic (bot aims toward player)
+   */
+  handleDrag() {
+    if (!this.missileRef || !this.missileRef.canBeDraggedBy(this)) return;
+    if (!this.playerRef) return;
+
+    // Calculate direction to player
+    const missilePos = this.missileRef.getPosition();
+    const playerPos = this.playerRef.getPosition();
+    const toPlayer = new THREE.Vector3().subVectors(playerPos, missilePos);
+    toPlayer.y = 0; // Keep horizontal
+    toPlayer.normalize();
+
+    // Current missile direction
+    const missileDir = this.missileRef.direction.clone();
+    missileDir.y = 0;
+    missileDir.normalize();
+
+    // Calculate how much to adjust (cross product gives perpendicular direction)
+    const cross = new THREE.Vector3().crossVectors(missileDir, toPlayer);
+    const dot = missileDir.dot(toPlayer);
+
+    // Only adjust if not already pointing at player
+    if (dot < 0.99) {
+      // Determine drag direction (left or right)
+      const dragDirection = cross.y > 0 ? 1 : -1;
+
+      // Apply drag based on skill (higher skill = more accurate drag)
+      // Add some randomness based on inverse of skill
+      const randomFactor = (1 - this.dragSkill) * (Math.random() - 0.5) * 2;
+      const dragAmount = (this.dragSkill + randomFactor * 0.5) * 15;
+
+      // Simulate mouse movement
+      const deltaX = dragDirection * dragAmount;
+      const deltaY = (Math.random() - 0.5) * 5 * (1 - this.dragSkill); // Vertical inaccuracy
+
+      // Create a fake camera for drag calculation (looking at player)
+      const fakeCamera = {
+        matrixWorld: new THREE.Matrix4().lookAt(
+          this.position,
+          playerPos,
+          new THREE.Vector3(0, 1, 0)
+        )
+      };
+
+      this.missileRef.applyDrag(deltaX, deltaY, fakeCamera);
+    }
+  }
+
+  /**
+   * AI movement logic
+   */
+  updateAI(deltaTime, missilePosition) {
+    if (!this.playerRef) return;
+
+    const playerPos = this.playerRef.getPosition();
+    const botPos = this.position.clone();
+    const toPlayer = new THREE.Vector3().subVectors(playerPos, botPos);
+    const distanceToPlayer = toPlayer.length();
+    toPlayer.normalize();
+
+    // Calculate strafe direction (perpendicular to player direction)
+    const strafeDir = new THREE.Vector3(-toPlayer.z, 0, toPlayer.x).normalize();
+
+    let moveDirection = new THREE.Vector3();
+
+    // Check if missile is targeting us and close
+    const isBeingTargeted = this.missileRef &&
+                            this.missileRef.isActive &&
+                            this.missileRef.target === this;
+
+    let missileDistance = Infinity;
+    if (missilePosition && this.missileRef && this.missileRef.isActive) {
+      missileDistance = botPos.distanceTo(missilePosition);
+    }
+
+    // Determine AI state
+    if (isBeingTargeted && missileDistance < BOT.DODGE_REACTION_DISTANCE && !this.canDeflect) {
+      // Dodge when missile is close and we can't deflect
+      this.aiState = 'dodging';
+    } else if (distanceToPlayer > BOT.MAX_DISTANCE) {
+      // Approach if too far
+      this.aiState = 'approaching';
+    } else if (distanceToPlayer < BOT.MIN_DISTANCE) {
+      // Back away if too close - prioritize keeping distance
+      this.aiState = 'retreating';
+    } else {
+      // Strafe around player at comfortable distance
+      this.aiState = 'strafing';
+    }
+
+    // Execute movement based on state
+    switch (this.aiState) {
+      case 'dodging':
+        // Dodge perpendicular to missile direction, also back away
+        if (missilePosition) {
+          const toMissile = new THREE.Vector3().subVectors(missilePosition, botPos).normalize();
+          const dodgeDir = new THREE.Vector3(-toMissile.z, 0, toMissile.x);
+          moveDirection.addScaledVector(dodgeDir, this.dodgeDirection);
+          // Also back away from missile
+          moveDirection.addScaledVector(toMissile, -0.3);
+        }
+        break;
+
+      case 'approaching':
+        moveDirection.addScaledVector(toPlayer, 0.6);
+        moveDirection.addScaledVector(strafeDir, this.dodgeDirection * 0.4);
+        break;
+
+      case 'retreating':
+        // Back away more aggressively when too close
+        moveDirection.addScaledVector(toPlayer, -0.9);
+        moveDirection.addScaledVector(strafeDir, this.dodgeDirection * 0.2);
+        break;
+
+      case 'strafing':
+      default:
+        // Maintain distance while strafing
+        const distanceError = distanceToPlayer - BOT.STRAFE_DISTANCE;
+        const distanceCorrection = Math.max(-0.3, Math.min(0.3, distanceError * 0.1));
+        moveDirection.addScaledVector(strafeDir, this.dodgeDirection);
+        moveDirection.addScaledVector(toPlayer, distanceCorrection);
+        break;
+    }
+
+    // Apply movement
+    if (moveDirection.lengthSq() > 0) {
+      moveDirection.normalize();
+      this.position.x += moveDirection.x * this.moveSpeed * deltaTime;
+      this.position.z += moveDirection.z * this.moveSpeed * deltaTime;
+
+      // Constrain to arena
+      this.constrainToArena();
+
+      // Update mesh position
+      if (this.mesh) {
+        this.mesh.position.copy(this.position);
+      }
+    }
+  }
+
+  /**
+   * Keep bot inside arena bounds
+   */
+  constrainToArena() {
+    const maxDist = ARENA.RADIUS - PLAYER.RADIUS - 1;
+    const distXZ = Math.sqrt(this.position.x ** 2 + this.position.z ** 2);
+
+    if (distXZ > maxDist) {
+      const scale = maxDist / distXZ;
+      this.position.x *= scale;
+      this.position.z *= scale;
+    }
   }
 
   /**
@@ -202,8 +432,19 @@ export class Bot extends Entity {
   }
 
   /**
+   * Calculate deflect accuracy based on missile speed
+   */
+  calculateAccuracy(missileSpeed) {
+    // Accuracy decreases as missile gets faster
+    const speedAboveBase = Math.max(0, missileSpeed - MISSILE.BASE_SPEED);
+    const accuracyLoss = speedAboveBase * this.accuracyLossPerSpeed;
+    const accuracy = Math.max(this.minAccuracy, this.baseAccuracy - accuracyLoss);
+    return accuracy;
+  }
+
+  /**
    * Check if bot should deflect the missile
-   * Bot has perfect deflection - always succeeds when missile is in range (if not on cooldown)
+   * Accuracy is affected by missile speed and difficulty
    */
   tryDeflect(missile) {
     if (!this.isAlive) return false;
@@ -219,16 +460,32 @@ export class Bot extends Entity {
     // Calculate distance to missile
     const distance = MathUtils.distanceXZ(this.position, missilePosition);
 
-    // Perfect deflection: if missile is within range, bot always deflects
-    if (this.perfectDeflection && distance <= this.deflectRange) {
+    // Check if missile is in range
+    if (distance <= this.deflectRange) {
+      // Check reaction delay (bot needs time to react)
+      if (this.reactionTimer < this.reactionDelay) {
+        return false;
+      }
+
       // Face the missile
       this.facePosition(missilePosition);
 
-      // Trigger cooldown
+      // Trigger cooldown regardless of success
       this.canDeflect = false;
       this.deflectCooldown = DEFLECTION.COOLDOWN;
+      this.reactionTimer = 0; // Reset reaction timer
 
-      return true;
+      // Calculate accuracy based on missile speed
+      const accuracy = this.calculateAccuracy(missile.speed);
+      const roll = Math.random();
+
+      // Success if roll is under accuracy threshold
+      if (roll < accuracy) {
+        return true;
+      }
+
+      // Failed to deflect - bot "missed"
+      return false;
     }
 
     return false;

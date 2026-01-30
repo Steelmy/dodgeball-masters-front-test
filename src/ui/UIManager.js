@@ -68,8 +68,18 @@ export class UIManager {
         <h1 class="text-6xl font-black mb-2 tracking-tighter bg-linear-to-r from-cyan-400 via-blue-500 to-purple-600 bg-clip-text text-transparent drop-shadow-lg">
           DODGEBALL MASTERS
         </h1>
-        <p class="text-xl text-slate-400 mb-12 tracking-[0.2em] font-light">TRAINING SIMULATION</p>
-        
+        <p class="text-xl text-slate-400 mb-8 tracking-[0.2em] font-light">TRAINING SIMULATION</p>
+
+        <!-- Difficulty Selector -->
+        <div class="mb-8">
+          <p class="text-xs text-slate-500 uppercase tracking-widest mb-3">Bot Difficulty</p>
+          <div class="flex justify-center gap-2" id="difficulty-selector">
+            <button class="difficulty-btn px-4 py-2 rounded text-sm font-bold transition-all border border-white/10 hover:border-green-500/50 text-slate-400 hover:text-green-400" data-difficulty="easy">Easy</button>
+            <button class="difficulty-btn px-4 py-2 rounded text-sm font-bold transition-all border border-cyan-500 bg-cyan-500/20 text-cyan-400" data-difficulty="medium">Medium</button>
+            <button class="difficulty-btn px-4 py-2 rounded text-sm font-bold transition-all border border-white/10 hover:border-red-500/50 text-slate-400 hover:text-red-400" data-difficulty="hard">Hard</button>
+          </div>
+        </div>
+
         <div class="flex flex-col gap-4 max-w-xs mx-auto">
           <button class="btn-primary group cursor-pointer" id="btn-start">
             <span class="group-hover:translate-x-1 transition-transform inline-block">Start Training</span>
@@ -79,6 +89,68 @@ export class UIManager {
       </div>
     `;
     this.container.appendChild(this.mainMenu);
+
+    // Setup difficulty selector
+    this.setupDifficultySelector();
+  }
+
+  setupDifficultySelector() {
+    this.selectedDifficulty = 'medium';
+    const buttons = this.mainMenu.querySelectorAll('.difficulty-btn');
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Update selection
+        this.selectedDifficulty = btn.dataset.difficulty;
+
+        // Update button styles
+        buttons.forEach(b => {
+          if (b.dataset.difficulty === this.selectedDifficulty) {
+            const color = this.getDifficultyColor(b.dataset.difficulty);
+            b.className = `difficulty-btn px-4 py-2 rounded text-sm font-bold transition-all border ${color.border} ${color.bg} ${color.text}`;
+          } else {
+            const hoverColor = this.getDifficultyColor(b.dataset.difficulty);
+            b.className = `difficulty-btn px-4 py-2 rounded text-sm font-bold transition-all border border-white/10 ${hoverColor.hover} text-slate-400 ${hoverColor.hoverText}`;
+          }
+        });
+
+        // Save preference
+        localStorage.setItem('dodgeball_bot_difficulty', this.selectedDifficulty);
+
+        // Emit event for Game to handle
+        if (this.onDifficultyChange) {
+          this.onDifficultyChange(this.selectedDifficulty);
+        }
+      });
+    });
+
+    // Load saved difficulty
+    const saved = localStorage.getItem('dodgeball_bot_difficulty');
+    if (saved && ['easy', 'medium', 'hard'].includes(saved)) {
+      this.selectedDifficulty = saved;
+      // Trigger click to update UI
+      const btn = this.mainMenu.querySelector(`[data-difficulty="${saved}"]`);
+      if (btn) btn.click();
+    }
+  }
+
+  getDifficultyColor(difficulty) {
+    switch (difficulty) {
+      case 'easy':
+        return { border: 'border-green-500', bg: 'bg-green-500/20', text: 'text-green-400', hover: 'hover:border-green-500/50', hoverText: 'hover:text-green-400' };
+      case 'hard':
+        return { border: 'border-red-500', bg: 'bg-red-500/20', text: 'text-red-400', hover: 'hover:border-red-500/50', hoverText: 'hover:text-red-400' };
+      default:
+        return { border: 'border-cyan-500', bg: 'bg-cyan-500/20', text: 'text-cyan-400', hover: 'hover:border-cyan-500/50', hoverText: 'hover:text-cyan-400' };
+    }
+  }
+
+  getDifficulty() {
+    return this.selectedDifficulty;
+  }
+
+  bindDifficultyChange(callback) {
+    this.onDifficultyChange = callback;
   }
 
   createHUD() {

@@ -20,7 +20,38 @@ export const PLAYER = {
 
 export const BOT = {
   DEFLECT_RANGE: 6,
-  PERFECT_DEFLECTION: true, // Bot never misses in training mode
+  DODGE_REACTION_DISTANCE: 6, // Start dodging when missile is this close
+  STRAFE_DISTANCE: 12,        // Ideal distance to maintain from player
+  MIN_DISTANCE: 8,            // Never get closer than this
+  MAX_DISTANCE: 18,           // Don't go further than this
+};
+
+// Bot difficulty presets (MOVE_SPEED same as player for fairness)
+export const BOT_DIFFICULTY = {
+  easy: {
+    name: 'Easy',
+    BASE_ACCURACY: 0.7,
+    ACCURACY_LOSS_PER_SPEED: 0.045,
+    MIN_ACCURACY: 0.25,
+    REACTION_DELAY: 120,  // ms delay before reacting
+    DRAG_SKILL: 0.5,      // How well bot uses drag mechanic (0-1)
+  },
+  medium: {
+    name: 'Medium',
+    BASE_ACCURACY: 0.88,
+    ACCURACY_LOSS_PER_SPEED: 0.025,
+    MIN_ACCURACY: 0.45,
+    REACTION_DELAY: 50,
+    DRAG_SKILL: 0.78,
+  },
+  hard: {
+    name: 'Hard',
+    BASE_ACCURACY: 0.97,
+    ACCURACY_LOSS_PER_SPEED: 0.008,
+    MIN_ACCURACY: 0.7,
+    REACTION_DELAY: 12,
+    DRAG_SKILL: 0.95,
+  },
 };
 
 export const MISSILE = {

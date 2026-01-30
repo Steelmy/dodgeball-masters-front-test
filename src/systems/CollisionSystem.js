@@ -66,10 +66,8 @@ export class CollisionSystem {
     // Switch missile team to deflector's team
     this.missile.setTeam(deflector.team);
 
-    // Start drag mode for player (not bot) - allows controlling direction
-    if (deflector === this.player) {
-      this.missile.startDrag(deflector);
-    }
+    // Start drag mode - allows controlling direction
+    this.missile.startDrag(deflector);
 
     // Update target indicators
     deflector.setTargeted(false);

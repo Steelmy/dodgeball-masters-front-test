@@ -96,6 +96,9 @@ export class Game {
     // Give player missile reference for drag mechanic
     this.player.setMissile(this.missile);
 
+    // Give bot references for AI behavior
+    this.bot.setReferences(this.player, this.missile);
+
     // Set initial positions
     const spawnPositions = this.arena.getSpawnPositions();
     this.player.setPosition(spawnPositions.player.position.x, 0, spawnPositions.player.position.z);
@@ -161,6 +164,17 @@ export class Game {
     this.uiManager.bindQuitButton(() => this.quitToMenu());
     this.uiManager.bindPlayAgainButton(() => this.startGame());
     this.uiManager.bindMainMenuButton(() => this.quitToMenu());
+
+    // Bind difficulty change
+    this.uiManager.bindDifficultyChange((difficulty) => {
+      this.bot.setDifficulty(difficulty);
+    });
+
+    // Apply saved difficulty
+    const savedDifficulty = this.uiManager.getDifficulty();
+    if (savedDifficulty) {
+      this.bot.setDifficulty(savedDifficulty);
+    }
 
     // Bind Settings
     this.uiManager.bindSettingsActions({
@@ -540,9 +554,9 @@ export class Game {
     // Update player with arena for collision bounds
     this.player.update(deltaTime, this.arena);
 
-    // Update bot (track missile or player)
-    const targetPos = this.missile.isActive ? this.missile.getPosition() : this.player.getPosition();
-    this.bot.update(deltaTime, targetPos);
+    // Update bot (pass missile position for AI tracking)
+    const missilePos = this.missile.isActive ? this.missile.getPosition() : null;
+    this.bot.update(deltaTime, missilePos);
 
     // Update missile
     if (this.missile.isActive) {
