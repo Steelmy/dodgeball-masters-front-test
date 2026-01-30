@@ -6,6 +6,7 @@ import { CameraController } from './core/CameraController.js';
 import { Renderer } from './core/Renderer.js';
 import { InputManager } from './core/InputManager.js';
 import { AudioManager } from './core/AudioManager.js';
+import { AssetManager } from './core/AssetManager.js';
 
 // Entities
 import { Player } from './entities/Player.js';
@@ -105,6 +106,35 @@ export class Game {
 
     // Set camera to overview mode initially (for menu)
     this.cameraController.setOverviewMode();
+
+    // Warm up shaders by pre-rendering explosion materials
+    this.warmupShaders();
+  }
+
+  /**
+   * Pre-compile shaders by rendering dummy explosions once
+   * This prevents lag spikes when explosions spawn during gameplay
+   */
+  warmupShaders() {
+    // Create dummy explosions for both teams to compile their shaders
+    const dummyExplosions = [
+      new Explosion(new THREE.Vector3(0, -100, 0), 'player'),
+      new Explosion(new THREE.Vector3(0, -100, 0), 'bot'),
+    ];
+
+    // Add to scene temporarily
+    for (const exp of dummyExplosions) {
+      this.scene.add(exp.getMesh());
+    }
+
+    // Render one frame to compile shaders
+    this.renderer.render(this.scene, this.camera);
+
+    // Remove and dispose dummy explosions
+    for (const exp of dummyExplosions) {
+      this.scene.remove(exp.getMesh());
+      exp.dispose();
+    }
   }
 
   initSystems() {
@@ -521,6 +551,9 @@ export class Game {
 
     // Dispose UI
     this.uiManager.dispose();
+
+    // Dispose cached assets
+    AssetManager.dispose();
 
     // Clear global events
     globalEvents.clear();

@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Entity } from './Entity.js';
 import { PLAYER, COLORS, DEFLECTION, TEAMS, EVENTS } from '../utils/Constants.js';
 import { MathUtils } from '../utils/MathUtils.js';
 import { globalEvents } from '../utils/EventEmitter.js';
+import { AssetManager } from '../core/AssetManager.js';
 
 /**
  * Player
@@ -63,37 +63,29 @@ export class Player extends Entity {
   }
 
   loadWeapon() {
-    const loader = new GLTFLoader();
-    loader.load(
-      '/src/models/weapons/sci-fi-weapon/scene.gltf',
-      (gltf) => {
-        const weapon = gltf.scene;
+    // Use preloaded model from AssetManager
+    const weapon = AssetManager.getModelClone('weapon');
+    if (!weapon) return;
 
-        // Scale the weapon (model is very small)
-        weapon.scale.set(2, 2, 2);
+    // Scale the weapon (model is very small)
+    weapon.scale.set(2, 2, 2);
 
-        // Position weapon at right hand position
-        weapon.position.set(0.35, PLAYER.HEIGHT * 0.45, -0.25);
+    // Position weapon at right hand position
+    weapon.position.set(0.35, PLAYER.HEIGHT * 0.45, -0.25);
 
-        // Rotate weapon to point forward
-        weapon.rotation.set(0, Math.PI, 0);
+    // Rotate weapon to point forward
+    weapon.rotation.set(0, Math.PI, 0);
 
-        // Enable shadows
-        weapon.traverse((child) => {
-          if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-          }
-        });
-
-        this.weaponMesh = weapon;
-        this.mesh.add(weapon);
-      },
-      undefined,
-      (error) => {
-        console.error('Error loading weapon model:', error);
+    // Enable shadows
+    weapon.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
       }
-    );
+    });
+
+    this.weaponMesh = weapon;
+    this.mesh.add(weapon);
   }
 
   createMesh() {

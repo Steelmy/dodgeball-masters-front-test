@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { AssetManager } from '../core/AssetManager.js';
 
 const EXPLOSION_DURATION = 1.2; // seconds total
 const SCALE_UP_DURATION = 0.3; // fast scale-up phase
@@ -14,64 +14,36 @@ export class Explosion {
     this.done = false;
     this.materials = [];
 
-    this.loadModel(teamId);
+    this.setupModel(teamId);
   }
 
-  loadModel(teamId) {
-    const loader = new GLTFLoader();
-    const texturePath = teamId === 'player'
-      ? '/src/models/explosions/0/textures/Fire_diffuse_blue.png'
-      : '/src/models/explosions/0/textures/Fire_diffuse_orange.png';
+  setupModel(teamId) {
+    // Use preloaded model from AssetManager
+    const model = AssetManager.getModelClone('explosion');
+    if (!model) return;
 
-    const pointyColor = teamId === 'player'
-      ? new THREE.Color(0.0, 0.4, 1.0)
-      : new THREE.Color(1.0, 0.24, 0.0);
+    model.scale.set(0.01, 0.01, 0.01); // start tiny
 
-    loader.load(
-      '/src/models/explosions/0/scene.gltf',
-      (gltf) => {
-        const model = gltf.scene;
-        model.scale.set(0.01, 0.01, 0.01); // start tiny
+    // Get pre-built materials (cloned for independent opacity control)
+    const { main: mainMat, pointy: pointyMat } = AssetManager.getExplosionMaterials(teamId);
 
-        const textureLoader = new THREE.TextureLoader();
-        const diffuseTexture = textureLoader.load(texturePath);
-        diffuseTexture.flipY = false;
+    model.traverse((child) => {
+      if (child.isMesh) {
+        const oldMat = child.material;
+        const isPointy = child.name === 'Explosion_pointy' ||
+          (oldMat && oldMat.name === 'Fire_pointy');
 
-        model.traverse((child) => {
-          if (child.isMesh) {
-            // Replace material with standard material for proper fading
-            const oldMat = child.material;
-            const isPointy = child.name === 'Explosion_pointy' ||
-              (oldMat && oldMat.name === 'Fire_pointy');
+        // Use pre-built cloned materials
+        const newMat = isPointy ? pointyMat : mainMat;
+        if (newMat) {
+          child.material = newMat;
+          this.materials.push(newMat);
+        }
+      }
+    });
 
-            const newMat = new THREE.MeshStandardMaterial({
-              transparent: true,
-              opacity: 1.0,
-              side: THREE.DoubleSide,
-              depthWrite: false,
-            });
-
-            if (isPointy) {
-              newMat.color.copy(pointyColor);
-              newMat.emissive.copy(pointyColor);
-              newMat.emissiveIntensity = 0.5;
-            } else {
-              newMat.map = diffuseTexture;
-              newMat.emissive.copy(pointyColor);
-              newMat.emissiveIntensity = 0.3;
-            }
-
-            child.material = newMat;
-            this.materials.push(newMat);
-          }
-        });
-
-        this.model = model;
-        this.group.add(model);
-      },
-      undefined,
-      (error) => console.error('Error loading explosion model:', error)
-    );
+    this.model = model;
+    this.group.add(model);
   }
 
   update(deltaTime) {

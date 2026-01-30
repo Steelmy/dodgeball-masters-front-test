@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Entity } from './Entity.js';
 import { MISSILE, COLORS, DEFLECTION, ARENA } from '../utils/Constants.js';
 import { MathUtils } from '../utils/MathUtils.js';
+import { AssetManager } from '../core/AssetManager.js';
 
 /**
  * Missile
@@ -55,35 +55,26 @@ export class Missile extends Entity {
   createMesh() {
     const group = new THREE.Group();
 
-    const loader = new GLTFLoader();
-    loader.load(
-      '/src/models/missile/0/scene.gltf',
-      (gltf) => {
-        const model = gltf.scene;
-        
-        // Scale and orientation
-        model.scale.set(0.75, 0.75, 0.75); 
-        
-        // Removed rotation.y = Math.PI because it made the missile fly backwards.
-        // The default orientation of the model is correct for lookAt.
+    // Use preloaded model from AssetManager
+    const model = AssetManager.getModelClone('missile');
+    if (model) {
+      // Scale and orientation
+      model.scale.set(0.75, 0.75, 0.75);
 
-        model.traverse((child) => {
-          if (child.isMesh) {
-            child.castShadow = true;
-          }
-        });
-
-        this.missileModel = model;
-        group.add(model);
-        
-        // Apply initial team color to trail/glow if already set
-        if (this.teamId) {
-          this.setTeam(this.teamId);
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
         }
-      },
-      undefined,
-      (error) => console.error('Error loading missile:', error)
-    );
+      });
+
+      this.missileModel = model;
+      group.add(model);
+
+      // Apply initial team color to trail/glow if already set
+      if (this.teamId) {
+        this.setTeam(this.teamId);
+      }
+    }
 
     this.mesh = group;
     this.mesh.position.copy(this.position);
