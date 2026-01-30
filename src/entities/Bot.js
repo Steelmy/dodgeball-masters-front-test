@@ -25,6 +25,8 @@ export class Bot extends Entity {
     this.deflectRange = BOT.DEFLECT_RANGE;
     this.deflectConeAngle = DEFLECTION.CONE_ANGLE;
     this.perfectDeflection = BOT.PERFECT_DEFLECTION;
+    this.canDeflect = true;
+    this.deflectCooldown = 0;
 
     // State
     this.isAlive = true;
@@ -160,6 +162,15 @@ export class Bot extends Entity {
   update(deltaTime, missilePosition = null) {
     if (!this.isActive || !this.isAlive) return;
 
+    // Update deflect cooldown
+    if (!this.canDeflect) {
+      this.deflectCooldown -= deltaTime * 1000;
+      if (this.deflectCooldown <= 0) {
+        this.canDeflect = true;
+        this.deflectCooldown = 0;
+      }
+    }
+
     // Bot always rotates to face the missile
     if (missilePosition) {
       this.facePosition(missilePosition);
@@ -192,10 +203,13 @@ export class Bot extends Entity {
 
   /**
    * Check if bot should deflect the missile
-   * Bot has perfect deflection - always succeeds when missile is in range
+   * Bot has perfect deflection - always succeeds when missile is in range (if not on cooldown)
    */
   tryDeflect(missile) {
     if (!this.isAlive) return false;
+
+    // Check cooldown
+    if (!this.canDeflect) return false;
 
     // Can only deflect enemy missiles
     if (missile.teamId === this.team) return false;
@@ -209,6 +223,11 @@ export class Bot extends Entity {
     if (this.perfectDeflection && distance <= this.deflectRange) {
       // Face the missile
       this.facePosition(missilePosition);
+
+      // Trigger cooldown
+      this.canDeflect = false;
+      this.deflectCooldown = DEFLECTION.COOLDOWN;
+
       return true;
     }
 
@@ -249,7 +268,8 @@ export class Bot extends Entity {
     this.health = this.maxHealth;
     this.isAlive = true;
     this.isTargeted = false;
-    this.isTargeted = false;
+    this.canDeflect = true;
+    this.deflectCooldown = 0;
 
     if (spawnData) {
       const pos = spawnData.position || spawnData;
