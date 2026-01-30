@@ -13,7 +13,8 @@ const ASSET_MANIFEST = {
     missile: '/src/models/missile/0/scene.gltf',
     explosion: '/src/models/explosions/0/scene.gltf',
     weapon: '/src/models/weapons/sci-fi-weapon/scene.gltf',
-    arena: '/src/models/maps/0/scene.gltf',
+    map_orbital: '/src/models/maps/0/scene.gltf',
+    map_gladiator: '/src/models/maps/1/scene.gltf',
   },
   textures: {
     explosionBlue: '/src/models/explosions/0/textures/Fire_diffuse_blue.png',

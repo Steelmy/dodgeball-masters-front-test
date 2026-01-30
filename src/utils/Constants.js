@@ -85,6 +85,21 @@ export const ARENA = {
   WATER_SIZE: 150,     // Size of water plane
 };
 
+export const MAPS = {
+  orbital: {
+    id: 'orbital',
+    name: 'Orbital',
+    path: '/src/models/maps/0/scene.gltf',
+    scale: 3
+  },
+  gladiator: {
+    id: 'gladiator',
+    name: 'Gladiator',
+    path: '/src/models/maps/1/scene.gltf',
+    scale: 3
+  }
+};
+
 export const CAMERA = {
   FOV: 60,
   NEAR: 0.1,

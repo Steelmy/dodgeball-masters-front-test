@@ -72,8 +72,11 @@ export class Game {
   }
 
   initEntities() {
+    // Get saved map or default
+    const savedMap = localStorage.getItem('dodgeball_map_selection') || 'orbital';
+
     // Arena
-    this.arena = new Arena();
+    this.arena = new Arena(savedMap);
     this.scene.add(this.arena.getMesh());
 
     // Give camera access to input manager for mouse look
@@ -139,6 +142,27 @@ export class Game {
       this.scene.remove(exp.getMesh());
       exp.dispose();
     }
+  }
+
+  recreateArena(mapId) {
+    // Remove old arena
+    this.scene.remove(this.arena.getMesh());
+    this.arena.dispose();
+
+    // Create new arena
+    this.arena = new Arena(mapId);
+    this.scene.add(this.arena.getMesh());
+
+    // Update references in systems
+    this.roundManager.setEntities(this.player, this.bot, this.missile, this.arena);
+    
+    // Update spawn positions
+    const spawnPositions = this.arena.getSpawnPositions();
+    this.player.setPosition(spawnPositions.player.position.x, 0, spawnPositions.player.position.z);
+    this.bot.setPosition(spawnPositions.bot.position.x, 0, spawnPositions.bot.position.z);
+    
+    // Reset rotations
+    this.cameraController.setRotation(spawnPositions.player.rotation, Math.PI / 12);
   }
 
   initSystems() {
@@ -382,6 +406,12 @@ export class Game {
   }
 
   startGame() {
+    // Check if map changed
+    const selectedMap = this.uiManager.getMap();
+    if (this.arena.mapId !== selectedMap) {
+      this.recreateArena(selectedMap);
+    }
+
     this.uiManager.hideAll();
     this.player.getMesh().visible = true;
     this.bot.getMesh().visible = true;
