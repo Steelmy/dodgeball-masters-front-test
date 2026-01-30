@@ -554,11 +554,11 @@ export class Game {
 
     // Update bot (pass missile position for AI tracking)
     const missilePos = this.missile.isActive ? this.missile.getPosition() : null;
-    this.bot.update(deltaTime, missilePos);
+    this.bot.update(deltaTime, missilePos, this.arena);
 
     // Update missile
     if (this.missile.isActive) {
-      this.missile.update(deltaTime);
+      this.missile.update(deltaTime, this.arena);
     }
 
     // Update collision system
