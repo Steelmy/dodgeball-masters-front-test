@@ -9,6 +9,7 @@ import { AssetManager } from './AssetManager.js';
  */
 
 const CAMERA_MODE_STORAGE_KEY = 'dodgeball_camera_mode';
+const CAMERA_SETTINGS_STORAGE_KEY = 'dodgeball_camera_settings';
 
 export class CameraController {
   constructor() {
@@ -395,11 +396,30 @@ export class CameraController {
    */
   applySavedMode(player) {
     this.target = player;
+    this.loadSavedSettings();
+    this.updateTargetMeshVisibility();
+  }
+
+  /**
+   * Load saved camera settings from localStorage
+   */
+  loadSavedSettings() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(CAMERA_SETTINGS_STORAGE_KEY));
+      if (saved) {
+        if (saved.fov !== undefined) this.setFOV(saved.fov);
+        if (saved.distance !== undefined) this.distance = saved.distance;
+        if (saved.heightOffset !== undefined) this.heightOffset = saved.heightOffset;
+        if (saved.sideOffset !== undefined) this.sideOffset = saved.sideOffset;
+        return;
+      }
+    } catch (e) {
+      console.warn('Could not load camera settings from localStorage:', e);
+    }
+    // Defaults if nothing saved
     this.distance = 4;
     this.heightOffset = 0;
     this.sideOffset = 0;
-
-    this.updateTargetMeshVisibility();
   }
 
   /**
