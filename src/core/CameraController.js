@@ -52,8 +52,16 @@ export class CameraController {
     this.fpsWeapon = null;
     this.loadFPSWeapon();
 
+    // Collision detection
+    this.raycaster = new THREE.Raycaster();
+    this.arena = null;
+
     this.setInitialPosition();
     this.setupResizeHandler();
+  }
+
+  setArena(arena) {
+    this.arena = arena;
   }
 
   loadFPSWeapon() {
@@ -219,6 +227,29 @@ export class CameraController {
     }
 
     const desiredPosition = new THREE.Vector3(camX, camY, camZ);
+
+    // Camera Collision Detection
+    if (this.arena && this.arena.model) {
+      const direction = new THREE.Vector3().subVectors(desiredPosition, targetPos);
+      const dist = direction.length();
+      
+      if (dist > 0.001) {
+        direction.normalize();
+
+        this.raycaster.set(targetPos, direction);
+        this.raycaster.far = dist;
+
+        // Intersect with arena model
+        const intersects = this.raycaster.intersectObject(this.arena.model, true);
+
+        if (intersects.length > 0) {
+          // We hit something, clamp distance
+          // Add a small buffer to avoid seeing through the wall
+          const hitDist = Math.max(0.2, intersects[0].distance - 0.2);
+          desiredPosition.copy(targetPos).add(direction.multiplyScalar(hitDist));
+        }
+      }
+    }
 
     // Direct camera positioning (No smoothing)
     this.currentPosition.copy(desiredPosition);

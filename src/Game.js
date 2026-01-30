@@ -79,6 +79,9 @@ export class Game {
     this.arena = new Arena(savedMap);
     this.scene.add(this.arena.getMesh());
 
+    // Give camera access to arena for collision
+    this.cameraController.setArena(this.arena);
+
     // Give camera access to input manager for mouse look
     this.cameraController.setInputManager(this.inputManager);
 
@@ -152,6 +155,9 @@ export class Game {
     // Create new arena
     this.arena = new Arena(mapId);
     this.scene.add(this.arena.getMesh());
+
+    // Update camera reference
+    this.cameraController.setArena(this.arena);
 
     // Update references in systems
     this.roundManager.setEntities(this.player, this.bot, this.missile, this.arena);
