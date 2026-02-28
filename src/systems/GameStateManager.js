@@ -1,5 +1,5 @@
-import { GAME_STATES, EVENTS, GAME } from '../utils/Constants.js';
-import { globalEvents } from '../utils/EventEmitter.js';
+import { GAME_STATES, EVENTS, GAME, TEAMS } from "../utils/Constants.js";
+import { globalEvents } from "../utils/EventEmitter.js";
 
 /**
  * GameStateManager
@@ -102,14 +102,14 @@ export class GameStateManager {
     this.stateTimer += deltaTime;
 
     const newCountdown = Math.ceil(3 - this.stateTimer);
-    
+
     // Debug log
     // console.log(`Countdown: ${this.stateTimer.toFixed(2)} -> ${newCountdown}`);
 
     if (newCountdown !== this.countdownValue && newCountdown > 0) {
       this.countdownValue = newCountdown;
       if (audioManager) {
-        audioManager.play('countdown');
+        audioManager.play("countdown");
       }
       globalEvents.emit(EVENTS.ROUND_COUNTDOWN, { value: this.countdownValue });
     }
@@ -117,7 +117,7 @@ export class GameStateManager {
     if (this.stateTimer >= 3) {
       this.setState(GAME_STATES.PLAYING);
       if (audioManager) {
-        audioManager.play('roundStart');
+        audioManager.play("roundStart");
       }
     }
   }
@@ -126,18 +126,27 @@ export class GameStateManager {
    * End current round
    */
   endRound(winner, audioManager) {
-    if (winner === 'player') {
+    // winner is now TEAMS.BLUE or TEAMS.RED
+    // We need to map team to score
+    // Assuming PLAYER = BLUE, BOT = RED for scoring terminology
+    // better to rename scores to blueScore/redScore but that's a big refactor
+    // Let's keep playerScore/botScore but map them
+
+    // BLUE = Player Team (usually)
+    // RED = Bot Team (usually)
+    // Using string literals to avoid ReferenceError with TEAMS constant if import fails
+    if (winner === "BLUE") {
       this.playerScore++;
       this.stats.playerKills++;
       this.stats.botDeaths++;
-    } else if (winner === 'bot') {
+    } else if (winner === "RED") {
       this.botScore++;
       this.stats.botKills++;
       this.stats.playerDeaths++;
     }
 
     if (audioManager) {
-      audioManager.play('roundEnd');
+      audioManager.play("roundEnd");
     }
 
     globalEvents.emit(EVENTS.ROUND_END, {
@@ -153,7 +162,10 @@ export class GameStateManager {
     this.clearPendingTimers();
 
     // Check for match end
-    if (this.playerScore >= this.roundsToWin || this.botScore >= this.roundsToWin) {
+    if (
+      this.playerScore >= this.roundsToWin ||
+      this.botScore >= this.roundsToWin
+    ) {
       this.pendingMatchEndTimer = setTimeout(() => {
         this.pendingMatchEndTimer = null;
         this.endMatch(audioManager);
@@ -184,12 +196,12 @@ export class GameStateManager {
    * End match
    */
   endMatch(audioManager) {
-    const winner = this.playerScore > this.botScore ? 'player' : 'bot';
+    const winner = this.playerScore > this.botScore ? "BLUE" : "RED";
 
     this.setState(GAME_STATES.MATCH_END);
 
     if (audioManager) {
-      audioManager.play(winner === 'player' ? 'victory' : 'defeat');
+      audioManager.play(winner === "BLUE" ? "victory" : "defeat");
     }
 
     globalEvents.emit(EVENTS.MATCH_END, {
@@ -244,7 +256,10 @@ export class GameStateManager {
       // If resuming from ROUND_END, restart the round transition timer
       if (targetState === GAME_STATES.ROUND_END) {
         // Check for match end
-        if (this.playerScore >= this.roundsToWin || this.botScore >= this.roundsToWin) {
+        if (
+          this.playerScore >= this.roundsToWin ||
+          this.botScore >= this.roundsToWin
+        ) {
           this.pendingMatchEndTimer = setTimeout(() => {
             this.pendingMatchEndTimer = null;
             this.endMatch();

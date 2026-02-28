@@ -1,8 +1,8 @@
-import * as THREE from 'three';
-import { Entity } from './Entity.js';
-import { MISSILE, COLORS, DEFLECTION, ARENA } from '../utils/Constants.js';
-import { MathUtils } from '../utils/MathUtils.js';
-import { AssetManager } from '../core/AssetManager.js';
+import * as THREE from "three";
+import { Entity } from "./Entity.js";
+import { MISSILE, COLORS, DEFLECTION, ARENA } from "../utils/Constants.js";
+import { MathUtils } from "../utils/MathUtils.js";
+import { AssetManager } from "../core/AssetManager.js";
 
 /**
  * Missile
@@ -40,6 +40,11 @@ export class Missile extends Entity {
     // Grace period after deflect (prevents immediate collision with new target)
     this.deflectGraceTimer = 0;
 
+    // Network interpolation (client-side)
+    this.networkTargetPosition = new THREE.Vector3();
+    this.hasNetworkTarget = false;
+    this.localDeflectPending = false; // True when client predicted a deflect, awaiting host confirmation
+
     // Visual
     this.trailParticles = [];
 
@@ -56,7 +61,7 @@ export class Missile extends Entity {
     const group = new THREE.Group();
 
     // Use preloaded model from AssetManager
-    const model = AssetManager.getModelClone('missile');
+    const model = AssetManager.getModelClone("missile");
     if (model) {
       // Scale and orientation
       model.scale.set(0.75, 0.75, 0.75);
@@ -111,7 +116,10 @@ export class Missile extends Entity {
       this.targetPosition.y = this.target.position.y + 0.9;
     }
 
-    const toTarget = new THREE.Vector3().subVectors(this.targetPosition, this.position);
+    const toTarget = new THREE.Vector3().subVectors(
+      this.targetPosition,
+      this.position,
+    );
     const distanceToTarget = toTarget.length();
     toTarget.normalize();
 
@@ -135,7 +143,7 @@ export class Missile extends Entity {
 
     // Rotate mesh to face direction of travel
     if (this.mesh) {
-      this.mesh.position.copy(this.position); 
+      this.mesh.position.copy(this.position);
       // lookAt is simpler and works well if we don't have conflicting updates
       this.mesh.lookAt(this.position.clone().add(this.direction));
     }
@@ -143,7 +151,40 @@ export class Missile extends Entity {
     // Update trail
     this.updateParticles(deltaTime);
 
+    // Apply network reconciliation if we have a target from host
+    this.reconcileNetwork(deltaTime);
+
     return distanceToTarget;
+  }
+
+  /**
+   * Smoothly reconcile local position with authoritative host position.
+   * Instead of snapping, lerp toward the host's position to avoid visual jitter.
+   */
+  reconcileNetwork(deltaTime) {
+    if (!this.hasNetworkTarget) return;
+
+    // If client just predicted a deflect locally, skip reconciliation
+    // until host confirms or corrects — avoids fighting the prediction
+    if (this.localDeflectPending) return;
+
+    const diff = this.networkTargetPosition.clone().sub(this.position);
+    const dist = diff.length();
+
+    if (dist < 0.01) {
+      // Close enough, snap
+      this.position.copy(this.networkTargetPosition);
+      this.hasNetworkTarget = false;
+    } else if (dist > 8) {
+      // Too far off (teleport/desync), hard snap
+      this.position.copy(this.networkTargetPosition);
+      this.hasNetworkTarget = false;
+    } else {
+      // Smooth correction: blend toward host position
+      // Higher factor = faster correction. 10 * dt at 60fps ≈ 0.17 per frame
+      const lerpFactor = Math.min(10 * deltaTime, 1);
+      this.position.lerp(this.networkTargetPosition, lerpFactor);
+    }
   }
 
   /**
@@ -152,9 +193,12 @@ export class Missile extends Entity {
    */
   constrainToEnvironment(arena) {
     // Floor constraint
-    const groundHeight = arena && arena.getFloorHeight ? arena.getFloorHeight(this.position.x, this.position.z) : 0;
+    const groundHeight =
+      arena && arena.getFloorHeight
+        ? arena.getFloorHeight(this.position.x, this.position.z)
+        : 0;
     const minY = groundHeight + MISSILE.RADIUS;
-    
+
     if (this.position.y < minY) {
       this.position.y = minY;
       if (this.velocity.y < 0) {
@@ -164,7 +208,9 @@ export class Missile extends Entity {
 
     // Arena circular boundary
     const maxDist = ARENA.RADIUS - MISSILE.RADIUS;
-    const distXZ = Math.sqrt(this.position.x * this.position.x + this.position.z * this.position.z);
+    const distXZ = Math.sqrt(
+      this.position.x * this.position.x + this.position.z * this.position.z,
+    );
     if (distXZ > maxDist) {
       // Push position back to boundary
       const scale = maxDist / distXZ;
@@ -172,7 +218,11 @@ export class Missile extends Entity {
       this.position.z *= scale;
 
       // Remove outward radial velocity component (slide along wall)
-      const normal = new THREE.Vector3(this.position.x, 0, this.position.z).normalize();
+      const normal = new THREE.Vector3(
+        this.position.x,
+        0,
+        this.position.z,
+      ).normalize();
       const dot = this.velocity.dot(normal);
       if (dot > 0) {
         this.velocity.addScaledVector(normal, -dot);
@@ -190,7 +240,7 @@ export class Missile extends Entity {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.life -= deltaTime;
-      
+
       if (p.life <= 0) {
         this.trailGroup.remove(p.mesh);
         this.particles.splice(i, 1);
@@ -204,31 +254,32 @@ export class Missile extends Entity {
 
   spawnParticle() {
     const geometry = new THREE.SphereGeometry(0.2, 8, 8); // Simple blob
-    const color = this.teamId === 'player' ? COLORS.TEAM_PLAYER : COLORS.TEAM_BOT;
+    const color =
+      this.teamId === "player" ? COLORS.TEAM_PLAYER : COLORS.TEAM_BOT;
     const material = new THREE.MeshBasicMaterial({
       color: color || COLORS.MISSILE_TRAIL,
       transparent: true,
-      opacity: 0.8
+      opacity: 0.8,
     });
-    
+
     const mesh = new THREE.Mesh(geometry, material);
-    
+
     // Position at the back of the missile
     const backwardOffset = this.direction.clone().multiplyScalar(-0.8);
     mesh.position.copy(this.position).add(backwardOffset);
-    
+
     // Random jitter for a thicker smoke effect
     mesh.position.x += (Math.random() - 0.5) * 0.1;
     mesh.position.y += (Math.random() - 0.5) * 0.1;
     mesh.position.z += (Math.random() - 0.5) * 0.1;
 
     this.trailGroup.add(mesh);
-    
+
     this.particles.push({
       mesh: mesh,
       life: 0.5, // 0.5 seconds life
       maxLife: 0.5,
-      initialSize: 1.0
+      initialSize: 1.0,
     });
   }
 
@@ -249,15 +300,17 @@ export class Missile extends Entity {
     this.deflectionCount++;
 
     // Additive increments based on deflection count
-    this.speed = MISSILE.BASE_SPEED + (MISSILE.SPEED_INCREMENT * this.deflectionCount);
+    this.speed =
+      MISSILE.BASE_SPEED + MISSILE.SPEED_INCREMENT * this.deflectionCount;
     if (MISSILE.MAX_SPEED > 0) {
       this.speed = Math.min(this.speed, MISSILE.MAX_SPEED);
     }
 
-    this.turnRate = MISSILE.TURN_RATE
+    this.turnRate = MISSILE.TURN_RATE;
 
     // Damage: base + (increment * deflections)
-    this.damage = MISSILE.BASE_DAMAGE + (MISSILE.DAMAGE_INCREMENT * this.deflectionCount);
+    this.damage =
+      MISSILE.BASE_DAMAGE + MISSILE.DAMAGE_INCREMENT * this.deflectionCount;
 
     // Set new target
     this.setTarget(newTarget);
@@ -272,7 +325,7 @@ export class Missile extends Entity {
     this.deflectGraceTimer = 150; // 150ms grace period
 
     // Emit event
-    this.emit('deflect', {
+    this.emit("deflect", {
       deflectionCount: this.deflectionCount,
       speed: this.speed,
       damage: this.damage,
@@ -376,11 +429,11 @@ export class Missile extends Entity {
     this.target = null;
     this.velocity.set(0, 0, 1);
     this.direction.set(0, 0, 1);
-    
+
     // Clear particles
     if (this.particles) {
-        this.particles.forEach(p => this.trailGroup.remove(p.mesh));
-        this.particles = [];
+      this.particles.forEach((p) => this.trailGroup.remove(p.mesh));
+      this.particles = [];
     }
 
     // Reset drag state
@@ -388,6 +441,10 @@ export class Missile extends Entity {
     this.dragTimer = 0;
     this.dragOwner = null;
     this.deflectGraceTimer = 0;
+
+    // Reset network interpolation
+    this.hasNetworkTarget = false;
+    this.localDeflectPending = false;
 
     // Reset to spawn position
     this.setPosition(0, MISSILE.SPAWN_HEIGHT, 0);
@@ -404,7 +461,7 @@ export class Missile extends Entity {
   setTeam(teamId) {
     this.teamId = teamId;
 
-    const color = teamId === 'player' ? COLORS.TEAM_PLAYER : COLORS.TEAM_BOT;
+    const color = teamId === "player" ? COLORS.TEAM_PLAYER : COLORS.TEAM_BOT;
 
     // Note: We do NOT color the missile body anymore, keeping original texture.
     // Trail particles are colored on spawn.
@@ -421,7 +478,10 @@ export class Missile extends Entity {
 
     // Initial velocity toward target
     if (initialTarget) {
-      const dir = MathUtils.directionTo(this.position, initialTarget.getPosition());
+      const dir = MathUtils.directionTo(
+        this.position,
+        initialTarget.getPosition(),
+      );
       this.velocity.copy(dir).multiplyScalar(this.speed);
       this.direction.copy(dir);
     }
@@ -454,9 +514,9 @@ export class Missile extends Entity {
   dispose() {
     if (this.trailGroup) {
       // Cleanup particles
-      this.particles.forEach(p => {
-          p.mesh.geometry.dispose();
-          p.mesh.material.dispose();
+      this.particles.forEach((p) => {
+        p.mesh.geometry.dispose();
+        p.mesh.material.dispose();
       });
       this.trailGroup.clear();
     }

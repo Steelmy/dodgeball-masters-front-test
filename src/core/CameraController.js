@@ -1,15 +1,15 @@
-import * as THREE from 'three';
-import { CAMERA, PLAYER } from '../utils/Constants.js';
-import { MathUtils } from '../utils/MathUtils.js';
-import { AssetManager } from './AssetManager.js';
+import * as THREE from "three";
+import { CAMERA, PLAYER } from "../utils/Constants.js";
+import { MathUtils } from "../utils/MathUtils.js";
+import { AssetManager } from "./AssetManager.js";
 
 /**
  * CameraController
  * First-Person / Third-Person camera with full mouse look control
  */
 
-const CAMERA_MODE_STORAGE_KEY = 'dodgeball_camera_mode';
-const CAMERA_SETTINGS_STORAGE_KEY = 'dodgeball_camera_settings';
+const CAMERA_MODE_STORAGE_KEY = "dodgeball_camera_mode";
+const CAMERA_SETTINGS_STORAGE_KEY = "dodgeball_camera_settings";
 
 export class CameraController {
   constructor() {
@@ -17,7 +17,7 @@ export class CameraController {
       CAMERA.FOV,
       window.innerWidth / window.innerHeight,
       CAMERA.NEAR,
-      CAMERA.FAR
+      CAMERA.FAR,
     );
 
     // Target to follow
@@ -27,12 +27,12 @@ export class CameraController {
     this.mode = this.loadSavedMode();
 
     // Camera rotation (controlled by mouse)
-    this.yaw = 0;   // Horizontal rotation (no limit, 360°)
+    this.yaw = 0; // Horizontal rotation (no limit, 360°)
     this.pitch = 0; // Vertical rotation (limited)
 
     // Pitch limits (in radians) - about 170° total range
-    this.minPitch = -Math.PI * 0.4;  // Looking up (~72°)
-    this.maxPitch = Math.PI * 0.45;   // Looking down (~81°)
+    this.minPitch = -Math.PI * 0.4; // Looking up (~72°)
+    this.maxPitch = Math.PI * 0.45; // Looking down (~81°)
 
     // Camera distance and offset from target (TPS mode)
     this.distance = 4;
@@ -67,7 +67,7 @@ export class CameraController {
 
   loadFPSWeapon() {
     // Use preloaded model from AssetManager
-    const weapon = AssetManager.getModelClone('weapon');
+    const weapon = AssetManager.getModelClone("weapon");
     if (!weapon) return;
 
     // Center the model (some GLTF exports have offset transforms)
@@ -100,7 +100,7 @@ export class CameraController {
     this.camera.add(weaponGroup);
 
     // Set initial visibility based on current mode
-    this.fpsWeapon.visible = this.mode === 'fps';
+    this.fpsWeapon.visible = this.mode === "fps";
   }
 
   setInitialPosition() {
@@ -111,7 +111,7 @@ export class CameraController {
 
   setupResizeHandler() {
     this.onResize = this.onResize.bind(this);
-    window.addEventListener('resize', this.onResize);
+    window.addEventListener("resize", this.onResize);
   }
 
   onResize() {
@@ -127,8 +127,8 @@ export class CameraController {
 
     // Listen for 'F' key to toggle camera mode
     if (this.inputManager) {
-      this.inputManager.on('keydown', ({ key }) => {
-        if (key === 'KeyF') {
+      this.inputManager.on("keydown", ({ key }) => {
+        if (key === "KeyF") {
           const newMode = this.toggleMode();
           console.log(`Camera mode switched to: ${newMode.toUpperCase()}`);
         }
@@ -161,9 +161,12 @@ export class CameraController {
       this.pitch = MathUtils.clamp(this.pitch, this.minPitch, this.maxPitch);
     }
 
-    if (!this.target) return;
+    if (!this.target) {
+      // console.warn("Camera: No target set!");
+      return;
+    }
 
-    if (this.mode === 'fps') {
+    if (this.mode === "fps") {
       this.updateFPS();
     } else {
       this.updateTPS();
@@ -175,12 +178,14 @@ export class CameraController {
    */
   updateFPS() {
     // Position camera at player's eye level
-    const targetPos = this.target.position ? this.target.position.clone() : new THREE.Vector3();
+    const targetPos = this.target.position
+      ? this.target.position.clone()
+      : new THREE.Vector3();
 
     const desiredPosition = new THREE.Vector3(
       targetPos.x,
       targetPos.y + this.fpsHeightOffset,
-      targetPos.z
+      targetPos.z,
     );
 
     // Instant position in FPS (no smoothing for responsiveness)
@@ -191,7 +196,7 @@ export class CameraController {
     const lookDirection = new THREE.Vector3(
       -Math.sin(this.yaw) * Math.cos(this.pitch),
       -Math.sin(this.pitch),
-      -Math.cos(this.yaw) * Math.cos(this.pitch)
+      -Math.cos(this.yaw) * Math.cos(this.pitch),
     );
 
     const lookTarget = desiredPosition.clone().add(lookDirection);
@@ -203,7 +208,9 @@ export class CameraController {
    */
   updateTPS() {
     // Get target position
-    const targetPos = this.target.position ? this.target.position.clone() : new THREE.Vector3();
+    const targetPos = this.target.position
+      ? this.target.position.clone()
+      : new THREE.Vector3();
     targetPos.add(this.targetOffset);
 
     // Calculate camera position based on spherical coordinates
@@ -231,9 +238,12 @@ export class CameraController {
 
     // Camera Collision Detection
     if (this.arena && this.arena.model) {
-      const direction = new THREE.Vector3().subVectors(desiredPosition, targetPos);
+      const direction = new THREE.Vector3().subVectors(
+        desiredPosition,
+        targetPos,
+      );
       const dist = direction.length();
-      
+
       if (dist > 0.001) {
         direction.normalize();
 
@@ -241,13 +251,18 @@ export class CameraController {
         this.raycaster.far = dist;
 
         // Intersect with arena model
-        const intersects = this.raycaster.intersectObject(this.arena.model, true);
+        const intersects = this.raycaster.intersectObject(
+          this.arena.model,
+          true,
+        );
 
         if (intersects.length > 0) {
           // We hit something, clamp distance
           // Add a small buffer to avoid seeing through the wall
           const hitDist = Math.max(0.2, intersects[0].distance - 0.2);
-          desiredPosition.copy(targetPos).add(direction.multiplyScalar(hitDist));
+          desiredPosition
+            .copy(targetPos)
+            .add(direction.multiplyScalar(hitDist));
         }
       }
     }
@@ -273,7 +288,7 @@ export class CameraController {
     return new THREE.Vector3(
       -Math.sin(this.yaw),
       0,
-      -Math.cos(this.yaw)
+      -Math.cos(this.yaw),
     ).normalize();
   }
 
@@ -284,7 +299,7 @@ export class CameraController {
     return new THREE.Vector3(
       Math.cos(this.yaw),
       0,
-      -Math.sin(this.yaw)
+      -Math.sin(this.yaw),
     ).normalize();
   }
 
@@ -306,7 +321,7 @@ export class CameraController {
    * Set camera to TPS mode following a player
    */
   setTPSMode(player) {
-    this.mode = 'tps';
+    this.mode = "tps";
     this.target = player;
     this.updateTargetMeshVisibility();
   }
@@ -315,7 +330,7 @@ export class CameraController {
    * Set camera to FPS mode following a player
    */
   setFPSMode(player) {
-    this.mode = 'fps';
+    this.mode = "fps";
     this.target = player;
     this.updateTargetMeshVisibility();
   }
@@ -324,10 +339,10 @@ export class CameraController {
    * Toggle between FPS and TPS modes
    */
   toggleMode() {
-    if (this.mode === 'fps') {
-      this.mode = 'tps';
+    if (this.mode === "fps") {
+      this.mode = "tps";
     } else {
-      this.mode = 'fps';
+      this.mode = "fps";
     }
 
     // Save preference to localStorage
@@ -347,12 +362,12 @@ export class CameraController {
     if (this.target && this.target.mesh) {
       // In FPS mode, hide the player mesh (locally only)
       // In TPS mode, show the player mesh
-      this.target.mesh.visible = this.mode !== 'fps';
+      this.target.mesh.visible = this.mode !== "fps";
     }
 
     // Update FPS weapon visibility
     if (this.fpsWeapon) {
-      this.fpsWeapon.visible = this.mode === 'fps';
+      this.fpsWeapon.visible = this.mode === "fps";
     }
   }
 
@@ -369,14 +384,14 @@ export class CameraController {
   loadSavedMode() {
     try {
       const savedMode = localStorage.getItem(CAMERA_MODE_STORAGE_KEY);
-      if (savedMode === 'fps' || savedMode === 'tps') {
+      if (savedMode === "fps" || savedMode === "tps") {
         return savedMode;
       }
     } catch (e) {
       // localStorage might not be available
-      console.warn('Could not load camera mode from localStorage:', e);
+      console.warn("Could not load camera mode from localStorage:", e);
     }
-    return 'fps'; // Default to first-person
+    return "fps"; // Default to first-person
   }
 
   /**
@@ -386,7 +401,7 @@ export class CameraController {
     try {
       localStorage.setItem(CAMERA_MODE_STORAGE_KEY, this.mode);
     } catch (e) {
-      console.warn('Could not save camera mode to localStorage:', e);
+      console.warn("Could not save camera mode to localStorage:", e);
     }
   }
 
@@ -405,16 +420,19 @@ export class CameraController {
    */
   loadSavedSettings() {
     try {
-      const saved = JSON.parse(localStorage.getItem(CAMERA_SETTINGS_STORAGE_KEY));
+      const saved = JSON.parse(
+        localStorage.getItem(CAMERA_SETTINGS_STORAGE_KEY),
+      );
       if (saved) {
         if (saved.fov !== undefined) this.setFOV(saved.fov);
         if (saved.distance !== undefined) this.distance = saved.distance;
-        if (saved.heightOffset !== undefined) this.heightOffset = saved.heightOffset;
+        if (saved.heightOffset !== undefined)
+          this.heightOffset = saved.heightOffset;
         if (saved.sideOffset !== undefined) this.sideOffset = saved.sideOffset;
         return;
       }
     } catch (e) {
-      console.warn('Could not load camera settings from localStorage:', e);
+      console.warn("Could not load camera settings from localStorage:", e);
     }
     // Defaults if nothing saved
     this.distance = 4;
@@ -475,7 +493,7 @@ export class CameraController {
   }
 
   resetDefaults() {
-    this.mode = 'tps';
+    this.mode = "tps";
     this.setFOV(60);
     this.distance = 4;
     this.heightOffset = 0;
@@ -485,6 +503,6 @@ export class CameraController {
   }
 
   dispose() {
-    window.removeEventListener('resize', this.onResize);
+    window.removeEventListener("resize", this.onResize);
   }
 }

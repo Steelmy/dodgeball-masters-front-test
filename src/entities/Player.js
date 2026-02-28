@@ -1,9 +1,15 @@
-import * as THREE from 'three';
-import { Entity } from './Entity.js';
-import { PLAYER, COLORS, DEFLECTION, TEAMS, EVENTS } from '../utils/Constants.js';
-import { MathUtils } from '../utils/MathUtils.js';
-import { globalEvents } from '../utils/EventEmitter.js';
-import { AssetManager } from '../core/AssetManager.js';
+import * as THREE from "three";
+import { Entity } from "./Entity.js";
+import {
+  PLAYER,
+  COLORS,
+  DEFLECTION,
+  TEAMS,
+  EVENTS,
+} from "../utils/Constants.js";
+import { MathUtils } from "../utils/MathUtils.js";
+import { globalEvents } from "../utils/EventEmitter.js";
+import { AssetManager } from "../core/AssetManager.js";
 
 /**
  * Player
@@ -61,8 +67,12 @@ export class Player extends Entity {
   }
 
   loadWeapon() {
+    // ... (existing code, abbreviated for brevity, but I will keep it intact in actual replacement if needed,
+    // but here I am just touching init and update)
+    // Actually, I should just modify init and the start of update.
+
     // Use preloaded model from AssetManager
-    const weapon = AssetManager.getModelClone('weapon');
+    const weapon = AssetManager.getModelClone("weapon");
     if (!weapon) return;
 
     // Center the model (some GLTF exports have offset transforms)
@@ -105,7 +115,7 @@ export class Player extends Entity {
       PLAYER.RADIUS,
       PLAYER.RADIUS,
       bodyHeight,
-      16
+      16,
     );
     const bodyMaterial = new THREE.MeshStandardMaterial({
       color: COLORS.PLAYER,
@@ -139,8 +149,6 @@ export class Player extends Entity {
     this.mesh = group;
     this.mesh.position.copy(this.position);
   }
-
-
 
   update(deltaTime, arena) {
     if (!this.isActive || !this.isAlive) return;
@@ -182,7 +190,9 @@ export class Player extends Entity {
     if (this.missile && this.missile.canBeDraggedBy(this)) {
       const rawDelta = this.inputManager.getRawMouseDelta();
       if (rawDelta.x !== 0 || rawDelta.y !== 0) {
-        const camera = this.cameraController ? this.cameraController.camera : null;
+        const camera = this.cameraController
+          ? this.cameraController.camera
+          : null;
         if (camera) {
           this.missile.applyDrag(rawDelta.x, rawDelta.y, camera);
         }
@@ -214,7 +224,7 @@ export class Player extends Entity {
       // Calculate movement direction relative to camera
       const moveDirection = new THREE.Vector3();
       moveDirection.addScaledVector(forward, -input.z); // W/S
-      moveDirection.addScaledVector(right, input.x);    // A/D
+      moveDirection.addScaledVector(right, input.x); // A/D
 
       if (moveDirection.length() > 0) {
         moveDirection.normalize();
@@ -246,11 +256,13 @@ export class Player extends Entity {
 
       // Update facing direction based on rotation (3D)
       // Pitch is positive when looking down, so Y component is negative sine
-      this.facingDirection.set(
-        -Math.sin(this.rotationY) * Math.cos(pitch),
-        -Math.sin(pitch),
-        -Math.cos(this.rotationY) * Math.cos(pitch)
-      ).normalize();
+      this.facingDirection
+        .set(
+          -Math.sin(this.rotationY) * Math.cos(pitch),
+          -Math.sin(pitch),
+          -Math.cos(this.rotationY) * Math.cos(pitch),
+        )
+        .normalize();
     }
   }
 
@@ -270,7 +282,10 @@ export class Player extends Entity {
 
   handleJump(deltaTime, arena) {
     // Get ground height at current position
-    const groundHeight = arena && arena.getFloorHeight ? arena.getFloorHeight(this.position.x, this.position.z) : 0;
+    const groundHeight =
+      arena && arena.getFloorHeight
+        ? arena.getFloorHeight(this.position.x, this.position.z)
+        : 0;
 
     // Check for jump input
     if (this.inputManager.isJumpPressed() && this.isGrounded && this.canJump) {
@@ -311,7 +326,10 @@ export class Player extends Entity {
     if (!this.isAlive) return false;
 
     // Can only deflect enemy missiles
-    if (missile.teamId === this.team) return false;
+    if (missile.teamId === this.team) {
+      console.log("Deflect failed: Friendly fire", missile.teamId, this.team);
+      return false;
+    }
 
     const missilePosition = missile.getPosition();
 
@@ -319,16 +337,27 @@ export class Player extends Entity {
     const eyePos = this.position.clone();
     eyePos.y += PLAYER.HEIGHT * 0.75;
 
+    const toPoint = new THREE.Vector3().subVectors(missilePosition, eyePos);
     const inCone = MathUtils.isInCone(
       eyePos,
       this.facingDirection,
       missilePosition,
       this.deflectConeAngle,
-      this.deflectRange
+      this.deflectRange,
     );
 
     if (inCone && this.isDeflecting) {
+      console.log("Deflect SUCCESS!");
       return true;
+    } else if (this.isDeflecting) {
+      console.log(
+        "Deflect failed: Not in cone",
+        inCone,
+        "Angle:",
+        this.deflectConeAngle,
+        "Dist:",
+        toPoint.length(),
+      );
     }
 
     return false;
@@ -341,7 +370,7 @@ export class Player extends Entity {
     if (!this.isAlive) return;
 
     this.health -= amount;
-    this.emit('damage', { amount, health: this.health });
+    this.emit("damage", { amount, health: this.health });
 
     // Emit global event for UI
     globalEvents.emit(EVENTS.PLAYER_DAMAGE, { amount, health: this.health });
@@ -357,7 +386,7 @@ export class Player extends Entity {
    */
   die() {
     this.isAlive = false;
-    this.emit('death', { player: this });
+    this.emit("death", { player: this });
 
     // Visual feedback
     if (this.mesh) {
@@ -388,7 +417,7 @@ export class Player extends Entity {
         this.facingDirection.set(
           -Math.sin(this.rotationY),
           0,
-          -Math.cos(this.rotationY)
+          -Math.cos(this.rotationY),
         );
       } else {
         this.rotationY = 0;

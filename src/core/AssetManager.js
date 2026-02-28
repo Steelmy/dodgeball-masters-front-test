@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 /**
  * AssetManager
@@ -93,7 +93,7 @@ class AssetManagerClass {
         this.onCompleteCallback();
       }
     } catch (error) {
-      console.error('AssetManager: Failed to load assets', error);
+      console.error("AssetManager: Failed to load assets", error);
       // Still mark as loaded to allow game to proceed (with fallbacks)
       this.isLoaded = true;
       if (this.onCompleteCallback) {
@@ -119,7 +119,7 @@ class AssetManagerClass {
           console.error(`AssetManager: Failed to load model ${key}:`, error);
           this.updateProgress();
           resolve(null); // Resolve anyway to not block other assets
-        }
+        },
       );
     });
   }
@@ -143,7 +143,7 @@ class AssetManagerClass {
           console.error(`AssetManager: Failed to load texture ${key}:`, error);
           this.updateProgress();
           resolve(null);
-        }
+        },
       );
     });
   }
@@ -164,8 +164,8 @@ class AssetManagerClass {
    * This pre-compiles shaders to avoid lag spikes during gameplay
    */
   createExplosionMaterials() {
-    const teams = ['player', 'bot'];
-    const textureKeys = { player: 'explosionBlue', bot: 'explosionOrange' };
+    const teams = ["player", "bot"];
+    const textureKeys = { player: "explosionBlue", bot: "explosionOrange" };
 
     for (const team of teams) {
       const texture = this.textures.get(textureKeys[team]);
@@ -230,7 +230,11 @@ class AssetManagerClass {
    * @returns {Object} { main: Material, pointy: Material }
    */
   getExplosionMaterials(teamId) {
-    const team = teamId === 'player' ? 'player' : 'bot';
+    // Map new team IDs to asset keys (assuming 'player' = blue, 'bot' = red/orange)
+    let team = "bot";
+    if (teamId === "player" || teamId === "BLUE") team = "player";
+    if (teamId === "bot" || teamId === "RED") team = "bot";
+
     const source = this.explosionMaterials[team];
 
     if (!source.main || !source.pointy) {

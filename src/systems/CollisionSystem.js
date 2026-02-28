@@ -1,7 +1,7 @@
-import { MISSILE, PLAYER } from '../utils/Constants.js';
-import { MathUtils } from '../utils/MathUtils.js';
-import { globalEvents } from '../utils/EventEmitter.js';
-import { EVENTS } from '../utils/Constants.js';
+import { MISSILE, PLAYER } from "../utils/Constants.js";
+import { MathUtils } from "../utils/MathUtils.js";
+import { globalEvents } from "../utils/EventEmitter.js";
+import { EVENTS } from "../utils/Constants.js";
 
 /**
  * CollisionSystem
@@ -12,16 +12,23 @@ export class CollisionSystem {
   constructor(audioManager) {
     this.audioManager = audioManager;
     this.player = null;
-    this.bot = null;
+    this.others = []; // Array of {bots, remotePlayers}
     this.missile = null;
+
+    // When true, only deflection checks run (no hit detection).
+    // Used by multiplayer clients: host is authoritative for hits.
+    this.isClientOnly = false;
   }
 
   /**
    * Set entities to track
+   * @param {Player} player - Local player
+   * @param {Array} others - Array of other entities (Bots, RemotePlayers)
+   * @param {Missile} missile - The ball
    */
-  setEntities(player, bot, missile) {
+  setEntities(player, others, missile) {
     this.player = player;
-    this.bot = bot;
+    this.others = others || [];
     this.missile = missile;
   }
 
@@ -31,56 +38,82 @@ export class CollisionSystem {
   update() {
     if (!this.missile || !this.missile.isActive) return;
 
-    const missilePos = this.missile.getPosition();
+    // 1. Check Deflections
+    const target = this.missile.target;
 
-    // Check deflection from player
-    if (this.player.isAlive && this.missile.target === this.player) {
-      if (this.player.tryDeflect(this.missile)) {
-        this.handleDeflection(this.player, this.bot);
+    if (target && target.isAlive) {
+      // Is target the local player?
+      if (target === this.player) {
+        if (this.player.tryDeflect(this.missile)) {
+          this.handleDeflection(this.player);
+        }
+      }
+      // Is target in our "others" list? (Bot or RemotePlayer)
+      else if (this.others.includes(target)) {
+        // If it's a BOT, we might run its deflection logic here IF we are the host?
+        // Or if Bot logic runs in Bot.update(), we just need to detect if it deflected?
+        // Bot.tryDeflect() is stateful (checks cooldowns), so calling it here is fine.
+        // RemotePlayers don't deflect locally usually (server handles it), but for visual prediction we might?
+        // For now, assume Bots are local-controlled by this client (if Host) or we just check mechanism.
+
+        if (target.tryDeflect && target.tryDeflect(this.missile)) {
+          this.handleDeflection(target);
+        }
       }
     }
 
-    // Check deflection from bot (perfect deflection)
-    if (this.bot.isAlive && this.missile.target !== this.bot) {
-      // Bot also needs to be able to help defend itself when targeted
+    // 2. Check Collisions (Hits) — skip on client in multiplayer (host-authoritative)
+    if (!this.isClientOnly) {
+      this.checkMissileCollision();
     }
-
-    // Bot deflection when targeted
-    if (this.bot.isAlive && this.missile.target === this.bot) {
-      if (this.bot.tryDeflect(this.missile)) {
-        this.handleDeflection(this.bot, this.player);
-      }
-    }
-
-    // Check missile collision with target
-    this.checkMissileCollision();
   }
 
   /**
    * Handle deflection
    */
-  handleDeflection(deflector, newTarget) {
-    // Deflect missile to furthest enemy (in 1v1, it's always the other one)
+  handleDeflection(deflector) {
+    // Find a new target (someone else who is alive and different team usually)
+    // For simplicity: any alive entity that is NOT the deflector.
+    // Ideally: prioritize enemies.
+
+    const candidates = [this.player, ...this.others].filter(
+      (e) => e !== deflector && e.isAlive && e.team !== deflector.team, // Try to target opposite team
+    );
+
+    // If no enemies, target anyone else (friendly fire? maybe not)
+    // If empty, random alive
+    let possibleTargets = candidates;
+    if (possibleTargets.length === 0) {
+      possibleTargets = [this.player, ...this.others].filter(
+        (e) => e !== deflector && e.isAlive,
+      );
+    }
+
+    if (possibleTargets.length === 0) return; // No one left to target
+
+    const newTarget =
+      possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
+
+    // Apply deflection
     this.missile.deflect(newTarget);
-
-    // Switch missile team to deflector's team
     this.missile.setTeam(deflector.team);
-
-    // Start drag mode - allows controlling direction
     this.missile.startDrag(deflector);
 
-    // Update target indicators
-    deflector.setTargeted(false);
-    newTarget.setTargeted(true);
+    // In client-only mode (multiplayer client), mark local prediction pending
+    // so network reconciliation doesn't fight this deflect before host confirms
+    if (this.isClientOnly) {
+      this.missile.localDeflectPending = true;
+    }
 
-    // Play sound
-    if (this.audioContext || this.audioManager) {
-      this.audioManager.play('deflect');
+    // Update indicators
+    if (deflector.setTargeted) deflector.setTargeted(false);
+    if (newTarget.setTargeted) newTarget.setTargeted(true);
 
-      // If deflector is not the player (e.g. Bot), also play the pulse sound
-      // (Player already plays it on right-click input)
+    // Sound
+    if (this.audioManager) {
+      this.audioManager.play("deflect");
       if (deflector !== this.player) {
-        this.audioManager.play('pulse');
+        this.audioManager.play("pulse");
       }
     }
 
@@ -106,12 +139,15 @@ export class CollisionSystem {
     const missilePrevPos = this.missile.previousPosition || missilePos;
 
     // Get target position and adjust to center of mass (chest height)
-    // Default to base position if height not available, but Player/Bot use PLAYER.HEIGHT
     const targetPos = this.missile.target.getPosition();
-    targetPos.y += (PLAYER.HEIGHT / 2);
+    targetPos.y += PLAYER.HEIGHT / 2;
 
     // Use continuous collision detection (segment vs sphere) to prevent tunneling
-    const distance = MathUtils.distanceToSegment(targetPos, missilePrevPos, missilePos);
+    const distance = MathUtils.distanceToSegment(
+      targetPos,
+      missilePrevPos,
+      missilePos,
+    );
     const collisionThreshold = MISSILE.RADIUS + PLAYER.RADIUS;
 
     if (distance < collisionThreshold) {
@@ -126,11 +162,11 @@ export class CollisionSystem {
     const damage = this.missile.getDamage();
 
     // Apply damage
-    target.takeDamage(damage);
+    if (target.takeDamage) target.takeDamage(damage);
 
     // Play sound
     if (this.audioManager) {
-      this.audioManager.play('hit');
+      this.audioManager.play("hit");
     }
 
     // Hide missile
@@ -153,7 +189,7 @@ export class CollisionSystem {
 
   dispose() {
     this.player = null;
-    this.bot = null;
+    this.others = [];
     this.missile = null;
   }
 }

@@ -1,8 +1,17 @@
-import * as THREE from 'three';
-import { Entity } from './Entity.js';
-import { PLAYER, COLORS, DEFLECTION, TEAMS, BOT, BOT_DIFFICULTY, MISSILE, ARENA } from '../utils/Constants.js';
-import { MathUtils } from '../utils/MathUtils.js';
-import { AssetManager } from '../core/AssetManager.js';
+import * as THREE from "three";
+import { Entity } from "./Entity.js";
+import {
+  PLAYER,
+  COLORS,
+  DEFLECTION,
+  TEAMS,
+  BOT,
+  BOT_DIFFICULTY,
+  MISSILE,
+  ARENA,
+} from "../utils/Constants.js";
+import { MathUtils } from "../utils/MathUtils.js";
+import { AssetManager } from "../core/AssetManager.js";
 
 /**
  * Bot
@@ -13,10 +22,15 @@ import { AssetManager } from '../core/AssetManager.js';
  */
 
 export class Bot extends Entity {
-  constructor() {
+  constructor(team = TEAMS.BOT) {
     super();
 
-    this.team = TEAMS.BOT;
+    this.team = team;
+
+    // Determine color based on team
+    if (this.team === TEAMS.BLUE) this.color = COLORS.BLUE;
+    else if (this.team === TEAMS.RED) this.color = COLORS.RED;
+    else this.color = COLORS.BOT;
 
     // Stats (same as player)
     this.health = PLAYER.MAX_HEALTH;
@@ -32,7 +46,7 @@ export class Bot extends Entity {
     this.moveSpeed = PLAYER.MOVE_SPEED;
 
     // Difficulty settings (defaults to medium)
-    this.difficulty = 'medium';
+    this.difficulty = "medium";
     this.baseAccuracy = BOT_DIFFICULTY.medium.BASE_ACCURACY;
     this.accuracyLossPerSpeed = BOT_DIFFICULTY.medium.ACCURACY_LOSS_PER_SPEED;
     this.minAccuracy = BOT_DIFFICULTY.medium.MIN_ACCURACY;
@@ -49,7 +63,7 @@ export class Bot extends Entity {
     this.missileRef = null;
     this.dodgeDirection = 1; // 1 = right, -1 = left
     this.dodgeTimer = 0;
-    this.aiState = 'idle'; // 'idle', 'strafing', 'dodging', 'approaching'
+    this.aiState = "idle"; // 'idle', 'strafing', 'dodging', 'approaching'
     this.reactionTimer = 0; // Delay before attempting deflect
 
     // Visual elements
@@ -90,7 +104,7 @@ export class Bot extends Entity {
 
   loadWeapon() {
     // Use preloaded model from AssetManager
-    const weapon = AssetManager.getModelClone('weapon');
+    const weapon = AssetManager.getModelClone("weapon");
     if (!weapon) return;
 
     // Center the model (some GLTF exports have offset transforms)
@@ -132,10 +146,10 @@ export class Bot extends Entity {
       PLAYER.RADIUS,
       PLAYER.RADIUS,
       bodyHeight,
-      16
+      16,
     );
     const bodyMaterial = new THREE.MeshStandardMaterial({
-      color: COLORS.BOT,
+      color: this.color,
       roughness: 0.4,
       metalness: 0.6,
     });
@@ -159,7 +173,7 @@ export class Bot extends Entity {
     // Head sphere
     const headGeometry = new THREE.SphereGeometry(PLAYER.RADIUS * 0.8, 16, 16);
     const headMaterial = new THREE.MeshStandardMaterial({
-      color: COLORS.BOT,
+      color: this.color,
       roughness: 0.3,
       metalness: 0.5,
     });
@@ -201,8 +215,6 @@ export class Bot extends Entity {
     this.mesh.position.copy(this.position);
   }
 
-
-
   /**
    * Set references for AI behavior
    */
@@ -231,7 +243,11 @@ export class Bot extends Entity {
     }
 
     // Update reaction timer (for deflect delay)
-    if (this.missileRef && this.missileRef.isActive && this.missileRef.target === this) {
+    if (
+      this.missileRef &&
+      this.missileRef.isActive &&
+      this.missileRef.target === this
+    ) {
       this.reactionTimer += deltaTime * 1000;
     } else {
       this.reactionTimer = 0;
@@ -302,8 +318,8 @@ export class Bot extends Entity {
         matrixWorld: new THREE.Matrix4().lookAt(
           this.position,
           playerPos,
-          new THREE.Vector3(0, 1, 0)
-        )
+          new THREE.Vector3(0, 1, 0),
+        ),
       };
 
       this.missileRef.applyDrag(deltaX, deltaY, fakeCamera);
@@ -328,9 +344,10 @@ export class Bot extends Entity {
     let moveDirection = new THREE.Vector3();
 
     // Check if missile is targeting us and close
-    const isBeingTargeted = this.missileRef &&
-                            this.missileRef.isActive &&
-                            this.missileRef.target === this;
+    const isBeingTargeted =
+      this.missileRef &&
+      this.missileRef.isActive &&
+      this.missileRef.target === this;
 
     let missileDistance = Infinity;
     if (missilePosition && this.missileRef && this.missileRef.isActive) {
@@ -338,26 +355,32 @@ export class Bot extends Entity {
     }
 
     // Determine AI state
-    if (isBeingTargeted && missileDistance < BOT.DODGE_REACTION_DISTANCE && !this.canDeflect) {
+    if (
+      isBeingTargeted &&
+      missileDistance < BOT.DODGE_REACTION_DISTANCE &&
+      !this.canDeflect
+    ) {
       // Dodge when missile is close and we can't deflect
-      this.aiState = 'dodging';
+      this.aiState = "dodging";
     } else if (distanceToPlayer > BOT.MAX_DISTANCE) {
       // Approach if too far
-      this.aiState = 'approaching';
+      this.aiState = "approaching";
     } else if (distanceToPlayer < BOT.MIN_DISTANCE) {
       // Back away if too close - prioritize keeping distance
-      this.aiState = 'retreating';
+      this.aiState = "retreating";
     } else {
       // Strafe around player at comfortable distance
-      this.aiState = 'strafing';
+      this.aiState = "strafing";
     }
 
     // Execute movement based on state
     switch (this.aiState) {
-      case 'dodging':
+      case "dodging":
         // Dodge perpendicular to missile direction, also back away
         if (missilePosition) {
-          const toMissile = new THREE.Vector3().subVectors(missilePosition, botPos).normalize();
+          const toMissile = new THREE.Vector3()
+            .subVectors(missilePosition, botPos)
+            .normalize();
           const dodgeDir = new THREE.Vector3(-toMissile.z, 0, toMissile.x);
           moveDirection.addScaledVector(dodgeDir, this.dodgeDirection);
           // Also back away from missile
@@ -365,22 +388,25 @@ export class Bot extends Entity {
         }
         break;
 
-      case 'approaching':
+      case "approaching":
         moveDirection.addScaledVector(toPlayer, 0.6);
         moveDirection.addScaledVector(strafeDir, this.dodgeDirection * 0.4);
         break;
 
-      case 'retreating':
+      case "retreating":
         // Back away more aggressively when too close
         moveDirection.addScaledVector(toPlayer, -0.9);
         moveDirection.addScaledVector(strafeDir, this.dodgeDirection * 0.2);
         break;
 
-      case 'strafing':
+      case "strafing":
       default:
         // Maintain distance while strafing
         const distanceError = distanceToPlayer - BOT.STRAFE_DISTANCE;
-        const distanceCorrection = Math.max(-0.3, Math.min(0.3, distanceError * 0.1));
+        const distanceCorrection = Math.max(
+          -0.3,
+          Math.min(0.3, distanceError * 0.1),
+        );
         moveDirection.addScaledVector(strafeDir, this.dodgeDirection);
         moveDirection.addScaledVector(toPlayer, distanceCorrection);
         break;
@@ -445,7 +471,10 @@ export class Bot extends Entity {
     // Accuracy decreases as missile gets faster
     const speedAboveBase = Math.max(0, missileSpeed - MISSILE.BASE_SPEED);
     const accuracyLoss = speedAboveBase * this.accuracyLossPerSpeed;
-    const accuracy = Math.max(this.minAccuracy, this.baseAccuracy - accuracyLoss);
+    const accuracy = Math.max(
+      this.minAccuracy,
+      this.baseAccuracy - accuracyLoss,
+    );
     return accuracy;
   }
 
@@ -505,7 +534,7 @@ export class Bot extends Entity {
     if (!this.isAlive) return;
 
     this.health -= amount;
-    this.emit('damage', { amount, health: this.health });
+    this.emit("damage", { amount, health: this.health });
 
     if (this.health <= 0) {
       this.health = 0;
@@ -518,7 +547,7 @@ export class Bot extends Entity {
    */
   die() {
     this.isAlive = false;
-    this.emit('death', { bot: this });
+    this.emit("death", { bot: this });
 
     if (this.mesh) {
       this.mesh.visible = false;
@@ -544,7 +573,7 @@ export class Bot extends Entity {
         this.facingDirection.set(
           -Math.sin(spawnData.rotation),
           0,
-          -Math.cos(spawnData.rotation)
+          -Math.cos(spawnData.rotation),
         );
         if (this.mesh) {
           this.mesh.rotation.y = spawnData.rotation;

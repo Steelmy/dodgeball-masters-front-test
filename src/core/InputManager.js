@@ -1,4 +1,4 @@
-import { EventEmitter } from '../utils/EventEmitter.js';
+import { EventEmitter } from "../utils/EventEmitter.js";
 
 /**
  * InputManager
@@ -26,12 +26,12 @@ export class InputManager extends EventEmitter {
 
     // Default key bindings
     this.bindings = {
-      forward: 'KeyW',
-      backward: 'KeyS',
-      left: 'KeyA',
-      right: 'KeyD',
-      jump: 'Space',
-      pause: 'Escape' // Added pause binding
+      forward: "KeyW",
+      backward: "KeyS",
+      left: "KeyA",
+      right: "KeyD",
+      jump: "Space",
+      pause: "Escape", // Added pause binding
     };
 
     this.setupEventListeners();
@@ -41,25 +41,25 @@ export class InputManager extends EventEmitter {
     // Keyboard events
     this.onKeyDown = this.onKeyDown.bind(this);
     this.onKeyUp = this.onKeyUp.bind(this);
-    window.addEventListener('keydown', this.onKeyDown);
-    window.addEventListener('keyup', this.onKeyUp);
+    window.addEventListener("keydown", this.onKeyDown);
+    window.addEventListener("keyup", this.onKeyUp);
 
     // Mouse events
     this.onMouseMove = this.onMouseMove.bind(this);
     this.onMouseDown = this.onMouseDown.bind(this);
     this.onMouseUp = this.onMouseUp.bind(this);
-    window.addEventListener('mousemove', this.onMouseMove);
-    window.addEventListener('mousedown', this.onMouseDown);
-    window.addEventListener('mouseup', this.onMouseUp);
+    window.addEventListener("mousemove", this.onMouseMove);
+    window.addEventListener("mousedown", this.onMouseDown);
+    window.addEventListener("mouseup", this.onMouseUp);
 
     // Pointer lock events
     this.onPointerLockChange = this.onPointerLockChange.bind(this);
     this.onPointerLockError = this.onPointerLockError.bind(this);
-    document.addEventListener('pointerlockchange', this.onPointerLockChange);
-    document.addEventListener('pointerlockerror', this.onPointerLockError);
+    document.addEventListener("pointerlockchange", this.onPointerLockChange);
+    document.addEventListener("pointerlockerror", this.onPointerLockError);
 
     // Prevent context menu on right click
-    window.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
   onKeyDown(event) {
@@ -67,13 +67,13 @@ export class InputManager extends EventEmitter {
 
     const key = event.code;
     this.keys.set(key, true);
-    this.emit('keydown', { key, event });
+    this.emit("keydown", { key, event });
   }
 
   onKeyUp(event) {
     const key = event.code;
     this.keys.set(key, false);
-    this.emit('keyup', { key, event });
+    this.emit("keyup", { key, event });
   }
 
   onMouseMove(event) {
@@ -82,30 +82,30 @@ export class InputManager extends EventEmitter {
     this.mouse.normalizedX = (event.clientX / window.innerWidth) * 2 - 1;
     this.mouse.normalizedY = -(event.clientY / window.innerHeight) * 2 + 1;
 
-    // Capture movement delta for pointer lock
-    this.mouse.deltaX = event.movementX || 0;
-    this.mouse.deltaY = event.movementY || 0;
+    // Capture movement delta for pointer lock (Accumulate, don't overwrite)
+    this.mouse.deltaX += event.movementX || 0;
+    this.mouse.deltaY += event.movementY || 0;
 
-    this.emit('mousemove', this.mouse);
+    this.emit("mousemove", this.mouse);
   }
 
   onPointerLockChange() {
     this.isPointerLocked = document.pointerLockElement !== null;
-    this.emit('pointerlockchange', this.isPointerLocked);
+    this.emit("pointerlockchange", this.isPointerLocked);
   }
 
   onPointerLockError() {
-    console.warn('Pointer lock failed/error');
-    this.emit('pointerlockerror');
+    console.warn("Pointer lock failed/error");
+    this.emit("pointerlockerror");
   }
 
   onMouseDown(event) {
     if (event.button === 0) {
       this.mouse.leftButton = true;
-      this.emit('leftclick', this.mouse);
+      this.emit("leftclick", this.mouse);
     } else if (event.button === 2) {
       this.mouse.rightButton = true;
-      this.emit('rightclick', this.mouse);
+      this.emit("rightclick", this.mouse);
     }
   }
 
@@ -131,10 +131,23 @@ export class InputManager extends EventEmitter {
     let x = 0;
     let z = 0;
 
-    if (this.isKeyPressed(this.bindings.forward) || this.isKeyPressed('ArrowUp')) z -= 1;
-    if (this.isKeyPressed(this.bindings.backward) || this.isKeyPressed('ArrowDown')) z += 1;
-    if (this.isKeyPressed(this.bindings.left) || this.isKeyPressed('ArrowLeft')) x -= 1;
-    if (this.isKeyPressed(this.bindings.right) || this.isKeyPressed('ArrowRight')) x += 1;
+    if (
+      this.isKeyPressed(this.bindings.forward) ||
+      this.isKeyPressed("ArrowUp")
+    )
+      z -= 1;
+    if (
+      this.isKeyPressed(this.bindings.backward) ||
+      this.isKeyPressed("ArrowDown")
+    )
+      z += 1;
+    if (this.isKeyPressed(this.bindings.left) || this.isKeyPressed("ArrowLeft"))
+      x -= 1;
+    if (
+      this.isKeyPressed(this.bindings.right) ||
+      this.isKeyPressed("ArrowRight")
+    )
+      x += 1;
 
     // Normalize diagonal movement
     if (x !== 0 && z !== 0) {
@@ -229,21 +242,21 @@ export class InputManager extends EventEmitter {
 
   resetBindings() {
     this.bindings = {
-      forward: 'KeyW',
-      backward: 'KeyS',
-      left: 'KeyA',
-      right: 'KeyD',
-      jump: 'Space',
-      pause: 'Escape'
+      forward: "KeyW",
+      backward: "KeyS",
+      left: "KeyA",
+      right: "KeyD",
+      jump: "Space",
+      pause: "Escape",
     };
   }
 
   dispose() {
-    window.removeEventListener('keydown', this.onKeyDown);
-    window.removeEventListener('keyup', this.onKeyUp);
-    window.removeEventListener('mousemove', this.onMouseMove);
-    window.removeEventListener('mousedown', this.onMouseDown);
-    window.removeEventListener('mouseup', this.onMouseUp);
+    window.removeEventListener("keydown", this.onKeyDown);
+    window.removeEventListener("keyup", this.onKeyUp);
+    window.removeEventListener("mousemove", this.onMouseMove);
+    window.removeEventListener("mousedown", this.onMouseDown);
+    window.removeEventListener("mouseup", this.onMouseUp);
     this.clear();
   }
 }
